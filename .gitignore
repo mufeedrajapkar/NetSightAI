@@ -1,0 +1,13 @@
+# Python cache & virtualenv
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+
+# SentinelNet generated logs (do not commit ground-truth run logs)
+*_log.csv
+*_log.json
+test_*.csv
+test_*.json
+human_log.csv
