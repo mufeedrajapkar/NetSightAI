@@ -1,0 +1,3 @@
+session_id,device_id,session_duration,packets_per_sec,packet_size_mean,packet_size_var,packet_interval_mean,packet_interval_var,bytes_transferred,packet_count,protocol,label,bot_tier
+PC04_S1,PC04,0.10295987129211426,48.562609269529574,83.8,190.56,0.025739967823028564,0.0005555333231761495,419,5,UDP,Bot,Tier3
+PC04_S2,PC04,0.3051869869232178,45.87351558184973,530.1428571428571,382897.8367346939,0.02347592207101675,0.006159706162598067,7422,14,TCP,Bot,Tier3

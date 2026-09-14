@@ -1,0 +1,2 @@
+session_id,device_id,session_duration,packets_per_sec,packet_size_mean,packet_size_var,packet_interval_mean,packet_interval_var,bytes_transferred,packet_count,protocol,label,bot_tier
+1,PC01,4.0,1.0,600,5000,1.33,0.05,2400,4,TCP,Bot,Tier2
