@@ -1,9 +1,14 @@
 import argparse
 
 from scapy.all import sniff
+
 from CN.agent.capture.packet_parser import parse_packet
 from CN.agent.flow.flow_processor import FlowProcessor
 
+
+# -----------------------------
+# Command-line arguments
+# -----------------------------
 
 parser = argparse.ArgumentParser(
     description="SentinelNet Network Traffic Capture Agent"
@@ -46,6 +51,10 @@ parser.add_argument(
 args = parser.parse_args()
 
 
+# -----------------------------
+# Initialize Flow Processor
+# -----------------------------
+
 processor = FlowProcessor(
     device_id=args.device_id,
     label=args.label,
@@ -53,6 +62,10 @@ processor = FlowProcessor(
     csv_file=args.output
 )
 
+
+# -----------------------------
+# Packet Callback
+# -----------------------------
 
 def packet_callback(packet):
 
@@ -79,6 +92,10 @@ def packet_callback(packet):
     )
 
 
+# -----------------------------
+# Start Capture
+# -----------------------------
+
 print("===================================")
 print(" SentinelNet Network Capture Agent")
 print("===================================")
@@ -92,6 +109,10 @@ print("Generate traffic to collect data.")
 print("Capture will stop automatically.")
 print()
 
+
+# -----------------------------
+# Capture Packets
+# -----------------------------
 
 try:
 
