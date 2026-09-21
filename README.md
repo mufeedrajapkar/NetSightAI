@@ -1,6 +1,6 @@
 # SentinelNet
 
-**SentinelNet** is a Network Security research project for classifying HTTP traffic into Human, Naive Bot, Jittered Bot, and Human-Mimicking Bot behaviors for Computer Networks (CN), AI, and Data Warehousing & Mining (DWM) academic coursework.
+**SentinelNet** is a Network Security research project for classifying HTTP traffic into Human, Naive Bot, Jittered Bot, and Human-Mimicking Bot behaviors for Computer Networks (CN), AI academic coursework.
 
 ## Project Modules
 
