@@ -1,6 +1,6 @@
 # SentinelNet - Synthetic Bot Traffic Generator Suite
 
-A Python suite for generating synthetic HTTP traffic tier classifications (Naive Bot, Jittered Bot, Human-Mimicking Bot, and Human Baseline) to train downstream Machine Learning classifiers for Network Security research (CN/AI/DWM projects).
+A Python suite for generating synthetic HTTP traffic tier classifications (Naive Bot, Jittered Bot, Human-Mimicking Bot, and Human Baseline) to train downstream Machine Learning classifiers for Network Security research (CN/AI projects).
 
 ---
 
