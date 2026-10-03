@@ -1,7 +1,10 @@
-# Python cache & virtualenv
+# Python cache & compiled files
 __pycache__/
 *.py[cod]
+*.pyc
 *$py.class
+
+# Virtual environments
 .venv/
 env/
 
