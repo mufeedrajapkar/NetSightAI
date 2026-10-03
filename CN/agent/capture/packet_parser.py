@@ -16,10 +16,12 @@ def parse_packet(packet):
 
     ip_layer = packet[IP]
 
-    # Default values
-    src_port = None
-    dst_port = None
-    protocol = "OTHER"
+    # Default flag and sequence values
+    is_syn = False
+    is_ack = False
+    is_fin = False
+    is_rst = False
+    seq = None
 
     # TCP packet
     if packet.haslayer(TCP):
@@ -28,6 +30,21 @@ def parse_packet(packet):
         src_port = tcp_layer.sport
         dst_port = tcp_layer.dport
         protocol = "TCP"
+
+        # Safely extract TCP flags bitmask
+        try:
+            flags_int = int(tcp_layer.flags)
+            is_fin = bool(flags_int & 0x01)
+            is_syn = bool(flags_int & 0x02)
+            is_rst = bool(flags_int & 0x04)
+            is_ack = bool(flags_int & 0x10)
+        except (ValueError, TypeError, AttributeError):
+            pass
+
+        try:
+            seq = int(tcp_layer.seq)
+        except (ValueError, TypeError, AttributeError):
+            seq = None
 
     # UDP packet
     elif packet.haslayer(UDP):
@@ -41,11 +58,16 @@ def parse_packet(packet):
         return None
 
     return {
-    "time": float(packet.time),
-    "src_ip": ip_layer.src,
-    "dst_ip": ip_layer.dst,
-    "src_port": src_port,
-    "dst_port": dst_port,
-    "protocol": protocol,
-    "packet_size": len(packet),
-}
+        "time": float(packet.time),
+        "src_ip": ip_layer.src,
+        "dst_ip": ip_layer.dst,
+        "src_port": src_port,
+        "dst_port": dst_port,
+        "protocol": protocol,
+        "packet_size": len(packet),
+        "is_syn": is_syn,
+        "is_ack": is_ack,
+        "is_fin": is_fin,
+        "is_rst": is_rst,
+        "seq": seq,
+    }
