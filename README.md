@@ -76,13 +76,51 @@ python -c "import pandas as pd; df=pd.read_csv('CN/data/processed/sentinelnet_da
 ### 7. Run CN tests
 
 ```powershell
-python -m pytest CN/tests -v
+.venv\Scripts\python -m pytest CN/tests -v
 ```
 
-### 🚀 One-Line Summary
+---
+
+## 🌐 SentinelNet Web Intelligence Dashboard
+
+A minimalist, dark-themed network intelligence dashboard connecting the frontend directly to the existing Computer Networks and AI classification pipeline.
+
+### Starting the Dashboard:
+
+#### 1. Start the Backend API Server:
+```powershell
+.venv\Scripts\python CN\web\backend_server.py
+```
+*(Runs on `http://127.0.0.1:5001`)*
+
+#### 2. Start the Frontend Dashboard:
+```powershell
+cd frontend
+npm run dev
+```
+*(Open `http://127.0.0.1:5173` in your browser)*
+
+### Dashboard Capabilities:
+- **Overview**: Real-time summary cards, prediction distribution donut chart, and recent flow telemetry.
+- **Live Traffic**: Replay Tier 1, 2, and 3 PCAP files with instant feature extraction and classification.
+- **AI Analysis**: In-depth inspection of the 9 model contract features and class probability estimates.
+- **Bot Analysis**: 3-tier comparative matrix and domain shift explanation.
+- **Architecture**: End-to-end pipeline topology and domain breakdown (Computer Networks vs AI).
+- **About Project**: Project one-liner, objectives, and actual technology stack.
+
+---
+
+## 🖥️ CLI Final Academic Demonstration
+
+Run the automated offline PCAP replay across all three bot tiers:
+
+```powershell
+.venv\Scripts\python CN\demos\run_final_demo.py
+```
+
+### 🚀 Pipeline Summary
 
 ```text
-Capture → Parse → Flow → Session → Features → Label → CSV → Merge → Validate → AI/ML
+Traffic Source → Packet Capture / PCAP Replay → Packet Parser → Flow Tracking → Feature Extraction → AI Bridge → ML Classifier → Dashboard
 ```
 
-> **Note:** Run packet capture with the required Windows/Npcap permissions. For multi-PC dataset collection, run the capture agent separately on each participating PC and use the appropriate `--device-id`, `--label`, and `--bot-tier`.

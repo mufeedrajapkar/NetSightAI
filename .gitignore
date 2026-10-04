@@ -8,9 +8,17 @@ __pycache__/
 .venv/
 env/
 
+# Frontend dependencies and build artifacts
+node_modules/
+dist/
+dist-ssr/
+frontend/dist/
+frontend/node_modules/
+
 # SentinelNet generated logs (do not commit ground-truth run logs)
 *_log.csv
 *_log.json
 test_*.csv
 test_*.json
 human_log.csv
+
