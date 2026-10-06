@@ -21,4 +21,15 @@ frontend/node_modules/
 test_*.csv
 test_*.json
 human_log.csv
+*ingested_dataset.csv
+
+# Environment & Secret Configurations (do not commit API keys)
+.env
+*.env
+.env.local
+.env.*.local
+!.env.example
+agent_config.json
+config.json
+
 

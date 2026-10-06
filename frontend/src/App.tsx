@@ -18,28 +18,38 @@ export const App: React.FC = () => {
   const [overview, setOverview] = useState<OverviewData | null>(null)
   const [flows, setFlows] = useState<FlowRecord[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true)
   const [selectedFlow, setSelectedFlow] = useState<FlowRecord | null>(null)
 
-  const loadAllData = async () => {
+  const loadAllData = async (silent: boolean = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const [statusRes, overviewRes, flowsRes] = await Promise.all([
         fetchStatus().catch(() => null),
         fetchOverview().catch(() => null),
         fetchFlows().catch(() => ({ count: 0, flows: [] })),
       ])
 
-      setStatus(statusRes)
-      setOverview(overviewRes)
-      setFlows(flowsRes.flows || [])
+      if (statusRes) setStatus(statusRes)
+      if (overviewRes) setOverview(overviewRes)
+      if (flowsRes && flowsRes.flows) setFlows(flowsRes.flows)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
   useEffect(() => {
-    loadAllData()
+    loadAllData(false)
   }, [])
+
+  // Live background polling every 3.5s
+  useEffect(() => {
+    if (!autoRefresh) return
+    const intervalId = setInterval(() => {
+      loadAllData(true)
+    }, 3500)
+    return () => clearInterval(intervalId)
+  }, [autoRefresh])
 
   return (
     <div className="flex h-screen bg-[#0c0d12] text-gray-100 overflow-hidden font-sans">
@@ -48,7 +58,13 @@ export const App: React.FC = () => {
 
       {/* Main Content Viewport */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TopBar status={status} loading={loading} />
+        <TopBar
+          status={status}
+          loading={loading}
+          autoRefresh={autoRefresh}
+          onToggleAutoRefresh={() => setAutoRefresh((prev) => !prev)}
+        />
+
 
         <main className="flex-1 overflow-y-auto">
           {currentTab === 'overview' && (

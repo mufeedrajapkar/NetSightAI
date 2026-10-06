@@ -1,17 +1,20 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   Activity,
   UserCheck,
   Bot,
   AlertTriangle,
-  Radio,
   Layers,
   ExternalLink,
   RefreshCw,
+  Monitor,
+  ShieldCheck,
+  AlertCircle,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import type { OverviewData, FlowRecord } from '../types'
 import { StatCard } from '../components/StatCard'
+
 
 interface OverviewPageProps {
   data: OverviewData | null
@@ -44,6 +47,29 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
 
   const hasData = totalFlows > 0
 
+  // Derive per-device threat state from observed sessions
+  const deviceThreats = useMemo(() => {
+    const map = new Map<string, { latestFlow: FlowRecord; totalSessions: number }>()
+    recentFlows.forEach((flow) => {
+      const devId = flow.device_id || (flow.source_file.startsWith('Agent ') ? flow.source_file.replace('Agent ', '') : 'PC01')
+      const existing = map.get(devId)
+      if (!existing) {
+        map.set(devId, { latestFlow: flow, totalSessions: 1 })
+      } else {
+        existing.totalSessions += 1
+        if (flow.epoch_time > existing.latestFlow.epoch_time) {
+          existing.latestFlow = flow
+        }
+      }
+    })
+    return Array.from(map.entries()).map(([deviceId, info]) => ({
+      deviceId,
+      latestFlow: info.latestFlow,
+      totalSessions: info.totalSessions,
+      status: info.latestFlow.predicted_label,
+    }))
+  }, [recentFlows])
+
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       {/* Page Header */}
@@ -53,7 +79,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             Network Intelligence Overview
           </h2>
           <p className="text-xs text-gray-400 mt-1">
-            Real-time behavioral telemetry, stateful flow aggregation, and AI classifications.
+            Real-time multi-device behavioral telemetry, stateful flow aggregation, and AI classifications.
           </p>
         </div>
         <button
@@ -96,10 +122,11 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           accentColor="red"
         />
         <StatCard
-          title="Capture Mode"
-          value={data?.capture_mode ? 'PCAP Replay' : 'N/A'}
-          subtext="Offline Mode Active"
-          icon={<Radio className="w-4 h-4" />}
+          title="Active Devices"
+          value={deviceThreats.length > 0 ? deviceThreats.length : '1'}
+          subtext="Live Ingest & Replay"
+          icon={<Monitor className="w-4 h-4" />}
+          accentColor="blue"
         />
         <StatCard
           title="Model Status"
@@ -109,6 +136,72 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           accentColor="green"
         />
       </div>
+
+      {/* Multi-Device Security & Threat Matrix */}
+      {deviceThreats.length > 0 && (
+        <div className="p-5 rounded-xl bg-[#12141d] border border-[#202432]">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-200">
+                Monitored Devices & Live Threat Status
+              </h3>
+              <p className="text-[11px] text-gray-400">
+                Real-time security posture per network node based on the latest AI session classification.
+              </p>
+            </div>
+            <span className="text-[11px] font-mono text-gray-400">
+              {deviceThreats.length} device{deviceThreats.length === 1 ? '' : 's'} reporting
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {deviceThreats.map((dev) => {
+              const isBot = dev.status === 'Bot'
+              const isSuspicious = dev.status === 'Suspicious'
+
+
+              return (
+                <div
+                  key={dev.deviceId}
+                  className={`p-3.5 rounded-lg border transition-all ${
+                    isBot
+                      ? 'bg-rose-950/20 border-rose-800/40 text-rose-300'
+                      : isSuspicious
+                      ? 'bg-amber-950/20 border-amber-800/40 text-amber-300'
+                      : 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="w-4 h-4" />
+                      <span className="font-mono font-bold text-xs">{dev.deviceId}</span>
+                    </div>
+                    {isBot ? (
+                      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">
+                        <AlertTriangle className="w-3 h-3" /> BOT DETECTED
+                      </span>
+                    ) : isSuspicious ? (
+                      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        <AlertCircle className="w-3 h-3" /> SUSPICIOUS
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        <ShieldCheck className="w-3 h-3" /> NORMAL
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-[11px] text-gray-400 flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                    <span>Latest: {dev.latestFlow.tier || dev.status}</span>
+                    <span className="font-mono text-[10px]">{dev.latestFlow.timestamp.split(' ')[1] || dev.latestFlow.timestamp}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
 
       {/* Main Visual Section: Donut Distribution & Recent Flow Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -206,6 +299,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                 <thead>
                   <tr className="border-b border-[#1f2430] text-gray-400 text-[10px] uppercase tracking-wider">
                     <th className="py-2.5 px-3">Flow ID</th>
+                    <th className="py-2.5 px-3">Device</th>
                     <th className="py-2.5 px-3">Protocol</th>
                     <th className="py-2.5 px-3">Duration</th>
                     <th className="py-2.5 px-3">Packets</th>
@@ -217,6 +311,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                   {recentFlows.map((flow) => {
                     const pred = flow.predicted_label
                     const conf = flow.probability_estimates?.[pred] ?? 0
+                    const devId = flow.device_id || (flow.source_file.startsWith('Agent ') ? flow.source_file.replace('Agent ', '') : 'PC01')
                     return (
                       <tr
                         key={flow.flow_id}
@@ -226,9 +321,21 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                         <td className="py-2.5 px-3 font-mono text-blue-400 font-medium">
                           {flow.flow_id}
                         </td>
+                        <td className="py-2.5 px-3 font-mono">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                            pred === 'Bot'
+                              ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                              : pred === 'Suspicious'
+                              ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                              : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                          }`}>
+                            {devId}
+                          </span>
+                        </td>
                         <td className="py-2.5 px-3 font-mono text-gray-300">
                           {flow.protocol}
                         </td>
+
                         <td className="py-2.5 px-3 font-mono text-gray-400">
                           {flow.session_duration.toFixed(3)}s
                         </td>

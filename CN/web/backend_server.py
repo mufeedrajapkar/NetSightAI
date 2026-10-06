@@ -22,6 +22,7 @@ import os
 import sys
 import time
 import uuid
+import json
 import threading
 from typing import Dict, Any, List
 
@@ -41,6 +42,45 @@ from CN.agent.capture.packet_capture import (
 from CN.agent.ai_bridge import AIBridge, REQUIRED_FEATURES, NUMERICAL_FEATURES, SUPPORTED_PROTOCOLS
 
 app = Flask(__name__)
+
+# ---------------------------------------------------------------------------
+# API Authentication Helper
+# ---------------------------------------------------------------------------
+def get_configured_api_key() -> str:
+    """
+    Retrieve configured API key from environment variable, .env, or config.json.
+    Falls back to a default demo key if none is explicitly specified.
+    """
+    key = os.environ.get("SENTINELNET_API_KEY")
+    if key and key.strip():
+        return key.strip()
+
+    env_file = os.path.join(_REPO_ROOT, ".env")
+    if os.path.exists(env_file):
+        try:
+            with open(env_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("SENTINELNET_API_KEY="):
+                        val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        if val:
+                            return val
+        except Exception:
+            pass
+
+    config_file = os.path.join(_REPO_ROOT, "config.json")
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, "r") as f:
+                data = json.load(f)
+                val = data.get("api_key") or data.get("SENTINELNET_API_KEY")
+                if val:
+                    return str(val).strip()
+        except Exception:
+            pass
+
+    return "sentinelnet-secret-key-change-me"
+
 
 # ---------------------------------------------------------------------------
 # In-Memory Session Store
@@ -64,8 +104,9 @@ _BRIDGE = AIBridge()
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-API-Key"
     return response
+
 
 
 # ---------------------------------------------------------------------------
@@ -106,9 +147,12 @@ def _process_pcap_tier(tier_id: str, label: str = "Bot") -> Dict[str, Any]:
 
     flow_record = {
         "flow_id": flow_id,
+        "session_id": flow_id,
+        "device_id": "PC01",
         "tier": tier_id,
         "source_type": "PCAP Replay",
         "source_file": pcap_filename,
+
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "epoch_time": time.time(),
         "expected_label": label,
@@ -253,7 +297,139 @@ def replay_tier(tier: str):
         return jsonify({"error": f"Replay execution failed: {str(exc)}"}), 500
 
 
+@app.route("/api/ingest", methods=["POST", "OPTIONS"])
+def ingest_flow():
+    """
+    Ingest a completed session's extracted features from a remote or local capture agent.
+
+    Authentication:
+      Requires 'X-API-Key' matching configured secret key.
+    """
+    if request.method == "OPTIONS":
+        return make_response("", 200)
+
+    # 1. API Key Authentication
+    expected_key = get_configured_api_key()
+    provided_key = request.headers.get("X-API-Key")
+
+    if not provided_key or provided_key != expected_key:
+        return jsonify({
+            "error": "Unauthorized: Missing or invalid X-API-Key header"
+        }), 401
+
+    # 2. Parse JSON Payload
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, dict):
+        return jsonify({
+            "error": "Bad Request: JSON object payload required"
+        }), 400
+
+    # 3. Extract Session Metadata
+    session_id = str(data.get("session_id") or f"sess_{int(time.time() * 1000) % 1000000}")
+    device_id = str(data.get("device_id") or "PC01")
+    timestamp = data.get("timestamp") or time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    expected_label = data.get("label", "Unknown")
+    bot_tier = data.get("bot_tier", "None")
+
+    # 4. Map and adapt features to AI Bridge Contract
+    features = dict(data)
+    if "requests_per_sec" not in features and "packets_per_sec" in features:
+        try:
+            features["requests_per_sec"] = float(features["packets_per_sec"])
+        except (ValueError, TypeError):
+            features["requests_per_sec"] = 0.0
+
+    if "request_interval_mean" not in features and "packet_interval_mean" in features:
+        try:
+            features["request_interval_mean"] = float(features["packet_interval_mean"])
+        except (ValueError, TypeError):
+            features["request_interval_mean"] = 0.0
+
+    if "request_interval_var" not in features and "packet_interval_var" in features:
+        try:
+            features["request_interval_var"] = float(features["packet_interval_var"])
+        except (ValueError, TypeError):
+            features["request_interval_var"] = 0.0
+
+    if "num_connections" not in features:
+        try:
+            features["num_connections"] = int(features.get("num_connections", 1))
+        except (ValueError, TypeError):
+            features["num_connections"] = 1
+
+    # Protocol normalization
+    raw_proto = str(features.get("protocol", "TCP")).strip().upper()
+    features["protocol"] = raw_proto if raw_proto in SUPPORTED_PROTOCOLS else "TCP"
+
+    # Ensure required numerical fields are numbers
+    for num_col in NUMERICAL_FEATURES:
+        if num_col in features:
+            try:
+                features[num_col] = float(features[num_col]) if num_col != "num_connections" else int(features[num_col])
+            except (ValueError, TypeError):
+                features[num_col] = 0.0
+
+    # 5. Route through AI Bridge
+    try:
+        prediction_result = _BRIDGE.predict(features)
+    except Exception as exc:
+        return jsonify({
+            "error": f"Classification failed: {str(exc)}"
+        }), 400
+
+    predicted_label = prediction_result["prediction"]
+    flow_id = session_id if session_id.startswith("flow_") else f"flow_{session_id}"
+
+    flow_record = {
+        "flow_id": flow_id,
+        "session_id": session_id,
+        "device_id": device_id,
+        "tier": bot_tier if bot_tier and bot_tier != "None" else "Live",
+        "source_type": "Live Agent Ingest",
+        "source_file": f"Agent {device_id}",
+        "timestamp": timestamp,
+        "epoch_time": time.time(),
+        "expected_label": expected_label,
+        "predicted_label": predicted_label,
+        "is_match": (predicted_label.lower() == expected_label.lower()) if expected_label and expected_label != "Unknown" else None,
+        "model_type": prediction_result.get("model_type", "LogisticRegression"),
+        "probability_estimates": prediction_result.get("probability_estimates", {}),
+        "features": prediction_result.get("features_used", {}),
+        "metadata": {
+            **prediction_result.get("metadata", {}),
+            "device_id": device_id,
+            "session_id": session_id,
+        },
+        "packet_count": int(data.get("packet_count", 0)),
+        "raw_packet_count": int(data.get("packet_count", 0)),
+        "session_duration": float(features.get("session_duration", 0.0)),
+        "bytes_transferred": int(features.get("bytes_transferred", 0)),
+        "protocol": features["protocol"],
+    }
+
+    # 6. Store in thread-safe memory list & server CSV log
+    with _STORE_LOCK:
+        _ANALYZED_FLOWS.append(flow_record)
+
+    try:
+        from CN.agent.csv_writer import save_to_csv
+        server_csv_path = os.path.join(_REPO_ROOT, "server_ingested_dataset.csv")
+        save_to_csv(data, filename=server_csv_path)
+    except Exception:
+        pass
+
+    return jsonify({
+        "message": "Session successfully ingested and classified",
+        "flow_id": flow_id,
+        "device_id": device_id,
+        "prediction": predicted_label,
+        "probability_estimates": prediction_result.get("probability_estimates", {}),
+        "flow": flow_record,
+    }), 201
+
+
 @app.route("/api/bot-tiers", methods=["GET"])
+
 def get_bot_tiers():
     """Return the 3 bot tier definitions and comparative evaluation matrix."""
     with _STORE_LOCK:

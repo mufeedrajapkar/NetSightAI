@@ -101,14 +101,56 @@ npm run dev
 *(Open `http://127.0.0.1:5173` in your browser)*
 
 ### Dashboard Capabilities:
-- **Overview**: Real-time summary cards, prediction distribution donut chart, and recent flow telemetry.
-- **Live Traffic**: Replay Tier 1, 2, and 3 PCAP files with instant feature extraction and classification.
+- **Overview**: Real-time summary cards, multi-device security threat matrix, prediction distribution donut chart, and recent flow telemetry.
+- **Live Traffic**: Live multi-device session stream and manual Tier 1, 2, and 3 PCAP replay.
 - **AI Analysis**: In-depth inspection of the 9 model contract features and class probability estimates.
 - **Bot Analysis**: 3-tier comparative matrix and domain shift explanation.
 - **Architecture**: End-to-end pipeline topology and domain breakdown (Computer Networks vs AI).
 - **About Project**: Project one-liner, objectives, and actual technology stack.
 
 ---
+
+## 📡 Live Multi-Device Network Pipeline (Distributed Lab Setup)
+
+SentinelNet supports real-time multi-PC ingestion. Each PC in the lab runs its own local capture agent and pushes completed sessions to the central server.
+
+### 1. Configure Shared Secret & Central Server URL
+On both the central server and remote PCs, set the shared API key and server URL using either environment variables or a gitignored `.env` file (see `.env.example`):
+
+**Via `.env` (recommended):**
+```bash
+# Copy template
+copy .env.example .env
+
+# Edit .env with your shared secret
+SENTINELNET_API_KEY=your_shared_lab_secret_key
+SENTINELNET_SERVER_URL=http://<CENTRAL_SERVER_IP>:5001
+```
+
+**Via PowerShell:**
+```powershell
+$env:SENTINELNET_API_KEY = "your_shared_lab_secret_key"
+$env:SENTINELNET_SERVER_URL = "http://192.168.1.100:5001"
+```
+
+### 2. Run Capture Agents on Lab PCs
+On each lab PC (e.g., PC01, PC02, PC03), run the capture agent with streaming enabled:
+
+```powershell
+python -m CN.agent.capture.test_capture --device-id PC02 --duration 60 --label Bot --bot-tier Tier1 --push --server-url http://192.168.1.100:5001
+```
+
+**Key Flags:**
+- `--push`: Enables live pushing of completed sessions to `/api/ingest`.
+- `--server-url <URL>`: Points to the central backend server (defaults to `SENTINELNET_SERVER_URL` env var).
+- `--api-key <KEY>`: Overrides API key (defaults to `SENTINELNET_API_KEY` env var or `.env`).
+- `--no-local-csv`: Skips local CSV writes on successful network push (still saves to local CSV automatically if server is unreachable).
+
+### 3. Graceful Fallback
+If the central server goes down or is unreachable, the agent automatically logs the error and saves all sessions to the local CSV without crashing.
+
+---
+
 
 ## 🖥️ CLI Final Academic Demonstration
 

@@ -224,7 +224,7 @@ export const LiveTrafficPage: React.FC<LiveTrafficPageProps> = ({
             <thead>
               <tr className="border-b border-[#1f2430] text-gray-400 text-[10px] uppercase tracking-wider">
                 <th className="py-2.5 px-3">Flow ID</th>
-                <th className="py-2.5 px-3">Source File</th>
+                <th className="py-2.5 px-3">Device / Source</th>
                 <th className="py-2.5 px-3">Timestamp</th>
                 <th className="py-2.5 px-3">Packets</th>
                 <th className="py-2.5 px-3">Duration</th>
@@ -236,6 +236,8 @@ export const LiveTrafficPage: React.FC<LiveTrafficPageProps> = ({
             <tbody className="divide-y divide-[#1a1d26]">
               {flows.map((flow) => {
                 const pred = flow.predicted_label
+                const devId = flow.device_id || (flow.source_file.startsWith('Agent ') ? flow.source_file.replace('Agent ', '') : 'PC01')
+                const isThreat = pred === 'Bot' || pred === 'Suspicious'
                 return (
                   <tr
                     key={flow.flow_id}
@@ -245,8 +247,21 @@ export const LiveTrafficPage: React.FC<LiveTrafficPageProps> = ({
                     <td className="py-2.5 px-3 font-mono font-medium text-blue-400">
                       {flow.flow_id}
                     </td>
-                    <td className="py-2.5 px-3 font-mono text-gray-300">
-                      {flow.source_file}
+                    <td className="py-2.5 px-3 font-mono">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                          pred === 'Bot'
+                            ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                            : pred === 'Suspicious'
+                            ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                            : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                        }`}>
+                          {devId}
+                        </span>
+                        <span className="text-gray-400 text-[10px]">
+                          {flow.source_type}
+                        </span>
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 font-mono text-gray-400">
                       {flow.timestamp}
@@ -273,11 +288,15 @@ export const LiveTrafficPage: React.FC<LiveTrafficPageProps> = ({
                         {pred}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 font-mono text-[10px]">
-                      {flow.is_match ? (
-                        <span className="text-emerald-400">MATCH</span>
+                    <td className="py-2.5 px-3 font-mono text-[11px]">
+                      {isThreat ? (
+                        <span className="text-rose-400 flex items-center gap-1 font-semibold">
+                          Alert Flagged
+                        </span>
                       ) : (
-                        <span className="text-amber-400">MISMATCH</span>
+                        <span className="text-emerald-400">
+                          Clear
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -286,6 +305,7 @@ export const LiveTrafficPage: React.FC<LiveTrafficPageProps> = ({
             </tbody>
           </table>
         </div>
+
       </div>
     </div>
   )

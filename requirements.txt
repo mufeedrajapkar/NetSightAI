@@ -5,3 +5,7 @@ seaborn
 scikit-learn
 joblib
 shap
+scapy
+flask
+requests
+pytest

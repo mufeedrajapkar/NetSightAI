@@ -5,9 +5,16 @@ import type { SystemStatus } from '../types'
 interface TopBarProps {
   status: SystemStatus | null
   loading: boolean
+  autoRefresh?: boolean
+  onToggleAutoRefresh?: () => void
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ status, loading }) => {
+export const TopBar: React.FC<TopBarProps> = ({
+  status,
+  loading,
+  autoRefresh = true,
+  onToggleAutoRefresh,
+}) => {
   const isOnline = Boolean(status && status.status === 'online')
   const isModelReady = Boolean(status?.model?.is_loaded)
   const isLiveCapturing = Boolean(status?.active_capture?.is_capturing)
@@ -21,7 +28,24 @@ export const TopBar: React.FC<TopBarProps> = ({ status, loading }) => {
       </div>
 
       <div className="flex items-center gap-4 text-xs">
+        {/* Live Auto-Polling Indicator */}
+        <button
+          onClick={onToggleAutoRefresh}
+          title={autoRefresh ? "Auto-refresh active (every 3.5s). Click to pause." : "Auto-refresh paused. Click to resume."}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
+            autoRefresh
+              ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/40'
+              : 'bg-[#181a24] border-[#262b3a] text-gray-400 hover:bg-[#202433]'
+          }`}
+        >
+          <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-400 animate-ping' : 'bg-gray-500'}`} />
+          <span className="font-mono text-[11px]">
+            {autoRefresh ? 'Live Ingest: 3.5s' : 'Polling: Paused'}
+          </span>
+        </button>
+
         {/* Operating Mode Indicator */}
+
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#181a24] border border-[#262b3a]">
           <Radio className={`w-3.5 h-3.5 ${isLiveCapturing ? 'text-emerald-400 animate-pulse' : 'text-blue-400'}`} />
           <span className="text-gray-400">Mode:</span>

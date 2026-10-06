@@ -19,6 +19,8 @@ export interface ProbabilityEstimates {
 
 export interface FlowRecord {
   flow_id: string
+  session_id?: string
+  device_id?: string
   tier?: string
   source_type: string
   source_file: string
@@ -26,8 +28,9 @@ export interface FlowRecord {
   epoch_time: number
   expected_label: string
   predicted_label: 'Human' | 'Bot' | 'Suspicious' | string
-  is_match: boolean
+  is_match: boolean | null
   model_type: string
+
   probability_estimates: ProbabilityEstimates
   features: FeatureValues
   metadata: Record<string, any>
