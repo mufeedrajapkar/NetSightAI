@@ -107,16 +107,25 @@ export interface BotTier {
   name: string
   sophistication: string
   description: string
+  sample_count?: number
   expected_label: string
   baseline_result: string
+  detection_rate?: number
+  precision?: number
+  recall?: number
+  f1?: number
   bot_probability: number
   human_probability: number
   latest_run?: FlowRecord | null
   behavior_notes: string
+  least_separated_features?: { feature: string; cohens_d: number }[]
 }
 
 export interface BotTiersResponse {
   tiers: BotTier[]
+  dataset_type?: string
+  has_curve_plot?: boolean
+  error?: string
   evaluation_summary: {
     total_tiers: number
     matches: number

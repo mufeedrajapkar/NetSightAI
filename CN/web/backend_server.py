@@ -26,7 +26,7 @@ import json
 import threading
 from typing import Dict, Any, List
 
-from flask import Flask, jsonify, request, make_response
+from flask import Flask, jsonify, request, make_response, send_file
 
 # Ensure repository root is on sys.path
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -500,70 +500,57 @@ def ingest_flow():
 
 
 @app.route("/api/bot-tiers", methods=["GET"])
-
 def get_bot_tiers():
-    """Return the 3 bot tier definitions and comparative evaluation matrix."""
+    """Return the evaluated bot tier definitions from ai/models/bot_tier_results.json."""
+    results_path = os.path.join(_REPO_ROOT, "ai", "models", "bot_tier_results.json")
+    if not os.path.exists(results_path):
+        return jsonify({
+            "error": "Bot tier analysis results not found. Run 'python ai/bot_tier_analysis.py' first.",
+            "tiers": [],
+            "evaluation_summary": {
+                "total_tiers": 0,
+                "matches": 0,
+                "mismatches": 0,
+                "source": "None",
+                "limitation_note": "No empirical evaluation found. Please execute ai/bot_tier_analysis.py.",
+            },
+        }), 404
+
+    try:
+        with open(results_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as exc:
+        return jsonify({"error": f"Failed to load bot tier results: {exc}"}), 500
+
     with _STORE_LOCK:
         flows = list(_ANALYZED_FLOWS)
 
-    # Find most recent run for each tier
+    # Attach any latest live replay runs if present
     tier_results = {}
     for t in ["tier1", "tier2", "tier3"]:
         matching = [f for f in flows if f.get("tier") == t]
-        if matching:
-            tier_results[t] = matching[-1]
-        else:
-            tier_results[t] = None
+        tier_results[t] = matching[-1] if matching else None
 
-    tiers_data = [
-        {
-            "id": "tier1",
-            "name": "Tier 1 - Naive Bot",
-            "sophistication": "Low",
-            "description": "Fixed 0.5s intervals, single hardcoded User-Agent, deterministic single-endpoint requests.",
-            "expected_label": "Bot",
-            "baseline_result": "Match (Bot)",
-            "bot_probability": 0.494743,
-            "human_probability": 0.457761,
-            "latest_run": tier_results.get("tier1"),
-            "behavior_notes": "High packet rate (~7.39 pkts/s) and near-zero interval variance strongly push logits toward Bot.",
-        },
-        {
-            "id": "tier2",
-            "name": "Tier 2 - Jittered Bot",
-            "sophistication": "Medium",
-            "description": "Uniform random delays (0.2s - 2.0s), randomized query parameters, rotating realistic User-Agents.",
-            "expected_label": "Bot",
-            "baseline_result": "Mismatch (Human)",
-            "bot_probability": 0.000706,
-            "human_probability": 0.998893,
-            "latest_run": tier_results.get("tier2"),
-            "behavior_notes": "Moderate packet rate (~3.02 pkts/s) is dominated by num_connections=1 (+5.71 to Human logit) and small loopback packet size (-4.47 to Bot logit).",
-        },
-        {
-            "id": "tier3",
-            "name": "Tier 3 - Human-Mimicking Bot",
-            "sophistication": "High",
-            "description": "Samples delays from empirical human distribution, includes 5-15s reading pauses, multi-step navigation flow.",
-            "expected_label": "Bot",
-            "baseline_result": "Mismatch (Human)",
-            "bot_probability": 0.000299,
-            "human_probability": 0.999437,
-            "latest_run": tier_results.get("tier3"),
-            "behavior_notes": "Engineered human delay distribution successfully evades baseline linear classifier, illustrating fundamental limits of macro-interval behavioral classification.",
-        },
-    ]
+    tiers_data = data.get("tiers", [])
+    for tier in tiers_data:
+        tier_id = tier.get("id")
+        tier["latest_run"] = tier_results.get(tier_id)
 
     return jsonify({
         "tiers": tiers_data,
-        "evaluation_summary": {
-            "total_tiers": 3,
-            "matches": 1,
-            "mismatches": 2,
-            "source": "Generated PCAP Replay (Offline Evaluation)",
-            "limitation_note": "The model was trained on synthetic data. Generated PCAP traffic exhibits distribution shift (num_connections=1, small loopback packet sizes), causing Tier 2 and Tier 3 mismatches.",
-        },
+        "evaluation_summary": data.get("evaluation_summary", {}),
+        "dataset_type": data.get("dataset_type", "unknown"),
+        "has_curve_plot": os.path.exists(os.path.join(_REPO_ROOT, "ai", "models", "bot_tier_curve.png")),
     })
+
+
+@app.route("/api/bot-tiers/curve", methods=["GET"])
+def get_bot_tier_curve():
+    """Serve the generated F1 difficulty curve plot."""
+    curve_path = os.path.join(_REPO_ROOT, "ai", "models", "bot_tier_curve.png")
+    if os.path.exists(curve_path):
+        return send_file(curve_path, mimetype="image/png")
+    return jsonify({"error": "Bot tier curve plot not found. Run ai/bot_tier_analysis.py first."}), 404
 
 
 @app.route("/api/architecture", methods=["GET"])

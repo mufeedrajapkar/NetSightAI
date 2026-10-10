@@ -3,6 +3,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   HelpCircle,
+  TrendingDown,
+  RefreshCw,
 } from 'lucide-react'
 import type { BotTiersResponse } from '../types'
 import { fetchBotTiers } from '../services/api'
@@ -10,48 +12,100 @@ import { fetchBotTiers } from '../services/api'
 export const BotAnalysisPage: React.FC = () => {
   const [data, setData] = useState<BotTiersResponse | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadData = () => {
+    setLoading(true)
+    setError(null)
     fetchBotTiers()
       .then((res) => {
         setData(res)
         setLoading(false)
       })
-      .catch(() => {
+      .catch((err: any) => {
+        setError(err.message || 'Failed to load bot tier evaluations')
         setLoading(false)
       })
+  }
+
+  useEffect(() => {
+    loadData()
   }, [])
 
   if (loading) {
-    return <div className="p-8 text-xs text-gray-400">Loading bot tier evaluations...</div>
+    return (
+      <div className="p-8 flex items-center justify-center text-xs text-gray-400">
+        <RefreshCw className="w-4 h-4 animate-spin mr-2 text-blue-400" />
+        Loading bot tier difficulty evaluations...
+      </div>
+    )
   }
 
-  const tiers = data?.tiers || []
+  if (error || !data || data.tiers.length === 0) {
+    return (
+      <div className="p-8 max-w-4xl mx-auto space-y-4">
+        <div className="p-6 rounded-xl bg-amber-950/20 border border-amber-800/40 text-amber-300 space-y-3">
+          <div className="flex items-center gap-2 font-semibold text-sm">
+            <AlertTriangle className="w-5 h-5 text-amber-400" />
+            Bot Tier Analysis Experiment Not Yet Executed
+          </div>
+          <p className="text-xs text-gray-300 leading-relaxed">
+            No empirical bot tier results were found in <code>ai/models/bot_tier_results.json</code>.
+            Execute the analysis script to compute real F1, recall, and feature separation metrics:
+          </p>
+          <pre className="p-3 rounded bg-black/40 border border-amber-800/30 text-xs font-mono text-gray-200">
+            python ai/bot_tier_analysis.py
+          </pre>
+          <button
+            onClick={loadData}
+            className="px-4 py-1.5 rounded-lg text-xs font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors"
+          >
+            Retry Loading
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const tiers = data.tiers || []
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-100 tracking-tight">
-          Bot Behavioral Sophistication Tiers & Evasion Analysis
-        </h2>
-        <p className="text-xs text-gray-400 mt-1">
-          Comparative evaluation of three distinct bot generation tiers against the baseline classification model.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold text-gray-100 tracking-tight">
+              Bot Behavioral Sophistication Tiers & Evasion Analysis
+            </h2>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              Dataset: {data.dataset_type === 'real' ? 'Real Captures' : 'Synthetic Prototype'}
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Empirical evaluation of detection performance across three ascending sophistication tiers.
+          </p>
+        </div>
+        <button
+          onClick={loadData}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium bg-[#1a1d28] hover:bg-[#222634] text-gray-300 border border-[#262b3a] transition-colors"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          Refresh Results
+        </button>
       </div>
 
-      {/* Model Limitation / Domain Shift Callout */}
-      <div className="p-4 rounded-lg bg-amber-950/20 border border-amber-800/30 flex items-start gap-3">
-        <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+      {/* Model Limitation / Sophistication Notice */}
+      <div className="p-4 rounded-lg bg-blue-950/20 border border-blue-800/30 flex items-start gap-3">
+        <AlertTriangle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
         <div className="text-xs text-gray-300 space-y-1">
-          <div className="font-semibold text-amber-300">
-            Model Domain Shift & Behavioral Evasion Limitation:
+          <div className="font-semibold text-blue-300">
+            Empirical Difficulty Gradient & Evasion Analysis:
           </div>
           <div className="text-gray-400 leading-relaxed">
-            The model was trained on synthetic data (<code>sentinelnet_sample_500.csv</code>). The generated PCAP
-            traffic has a different feature distribution (such as <code>num_connections = 1</code> and physical loopback
-            packet sizes of ~95–101 bytes), which causes distribution shift. Tier 3 further demonstrates the fundamental
-            boundary of statistical macro-interval analysis against human-mimicking bots.
+            As bot behavior evolves from naive deterministic loops (Tier 1) to Poisson jitter (Tier 2) and
+            empirical human pause distributions (Tier 3), detection accuracy decreases. Higher tiers mimic human
+            session duration and request interval variance, narrowing the feature distance separating them from genuine users.
           </div>
         </div>
       </div>
@@ -61,14 +115,14 @@ export const BotAnalysisPage: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-200">
-              Bot Tier Evaluation Matrix (Generated PCAP Replay)
+              Bot Tier Evaluation Matrix (Real Empirical Results)
             </h3>
             <p className="text-[11px] text-gray-400">
-              Preserved evaluation outcomes reflecting genuine mathematical logit calculations.
+              Computed metrics from <code>ai/bot_tier_analysis.py</code> without hardcoded constants.
             </p>
           </div>
           <div className="text-[11px] font-mono text-gray-400">
-            Evaluated: 3 Tiers • 1 Match • 2 Mismatches
+            Evaluated: {data.evaluation_summary.total_tiers} Tiers • {data.evaluation_summary.matches} Matches • {data.evaluation_summary.mismatches} Mismatches
           </div>
         </div>
 
@@ -78,11 +132,13 @@ export const BotAnalysisPage: React.FC = () => {
               <tr className="border-b border-[#232734] text-gray-400 text-[10px] uppercase tracking-wider">
                 <th className="py-3 px-4">Bot Tier</th>
                 <th className="py-3 px-4">Sophistication</th>
-                <th className="py-3 px-4">Expected Label</th>
-                <th className="py-3 px-4">Predicted Label</th>
+                <th className="py-3 px-4">Samples</th>
+                <th className="py-3 px-4">Detection Rate</th>
+                <th className="py-3 px-4">Precision</th>
+                <th className="py-3 px-4">Recall</th>
+                <th className="py-3 px-4">F1 Score</th>
                 <th className="py-3 px-4">Result Status</th>
                 <th className="py-3 px-4">Bot Probability</th>
-                <th className="py-3 px-4">Human Probability</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1c202b]">
@@ -98,17 +154,20 @@ export const BotAnalysisPage: React.FC = () => {
                         {t.sophistication}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-mono font-medium text-gray-300">
-                      {t.expected_label}
+                    <td className="py-3.5 px-4 font-mono text-gray-300">
+                      {t.sample_count ?? 'N/A'}
                     </td>
-                    <td className="py-3.5 px-4 font-mono font-semibold">
-                      <span
-                        className={
-                          t.baseline_result.includes('Bot') ? 'text-orange-400' : 'text-emerald-400'
-                        }
-                      >
-                        {t.baseline_result.includes('Bot') ? 'Bot' : 'Human'}
-                      </span>
+                    <td className="py-3.5 px-4 font-mono font-semibold text-emerald-400">
+                      {t.detection_rate !== undefined ? `${(t.detection_rate * 100).toFixed(1)}%` : 'N/A'}
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-gray-300">
+                      {t.precision !== undefined ? `${(t.precision * 100).toFixed(1)}%` : 'N/A'}
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-gray-300">
+                      {t.recall !== undefined ? `${(t.recall * 100).toFixed(1)}%` : 'N/A'}
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-semibold text-blue-400">
+                      {t.f1 !== undefined ? t.f1.toFixed(3) : 'N/A'}
                     </td>
                     <td className="py-3.5 px-4">
                       <span
@@ -119,20 +178,49 @@ export const BotAnalysisPage: React.FC = () => {
                         }`}
                       >
                         {isMatch ? <CheckCircle2 className="w-3 h-3" /> : <HelpCircle className="w-3 h-3" />}
-                        {isMatch ? 'MATCH' : 'MISMATCH / UNCERTAINTY'}
+                        {t.baseline_result}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-orange-400 font-medium">
-                      {(t.bot_probability * 100).toFixed(4)}%
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-emerald-400 font-medium">
-                      {(t.human_probability * 100).toFixed(4)}%
+                      {(t.bot_probability * 100).toFixed(2)}%
                     </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Difficulty Curve Plot Section */}
+      <div className="p-6 rounded-xl bg-[#12141d] border border-[#202432]">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <TrendingDown className="w-4 h-4 text-blue-400" />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-200">
+                Detection F1 vs Bot Sophistication Curve
+              </h3>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              Visual proof of difficulty curve generated by <code>ai/bot_tier_analysis.py</code>.
+            </p>
+          </div>
+          <span className="text-[10px] font-mono text-gray-400 bg-[#161924] px-2.5 py-1 rounded border border-[#232734]">
+            Plot: ai/models/bot_tier_curve.png
+          </span>
+        </div>
+
+        <div className="p-4 rounded-lg bg-[#0e1017] border border-[#1e2230] flex items-center justify-center">
+          <img
+            src="/api/bot-tiers/curve"
+            alt="Bot Tier Difficulty Curve"
+            className="max-h-96 object-contain rounded-md"
+            onError={(e) => {
+              // Hide image if not found
+              (e.target as HTMLElement).style.display = 'none'
+            }}
+          />
         </div>
       </div>
 
@@ -144,7 +232,7 @@ export const BotAnalysisPage: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-semibold text-gray-100">{t.name}</h4>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  {t.sophistication} Sophistication
+                  {t.sophistication}
                 </span>
               </div>
               <p className="text-xs text-gray-400 mb-3 leading-relaxed">
@@ -153,9 +241,25 @@ export const BotAnalysisPage: React.FC = () => {
             </div>
 
             <div className="space-y-3 pt-3 border-t border-[#1e2230]">
+              {/* Feature Separation Callout */}
+              {t.least_separated_features && t.least_separated_features.length > 0 && (
+                <div className="p-3 rounded-lg bg-[#161924] border border-[#232734] space-y-1.5 text-xs">
+                  <div className="text-[10px] uppercase text-gray-400 font-semibold">
+                    Least Separated Features (Closest to Human):
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {t.least_separated_features.map((f: any) => (
+                      <span key={f.feature} className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#1c202d] text-amber-300 border border-amber-500/20">
+                        {f.feature} (d={f.cohens_d})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="p-3 rounded-lg bg-[#161924] border border-[#232734] space-y-1.5 text-xs">
                 <div className="text-[10px] uppercase text-gray-400 font-semibold">
-                  Behavioral Root-Cause Analysis
+                  Behavioral Analysis
                 </div>
                 <p className="text-[11px] text-gray-300 leading-relaxed">
                   {t.behavior_notes}
@@ -164,12 +268,12 @@ export const BotAnalysisPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                 <div className="p-2 rounded bg-[#161924] border border-[#232734]">
-                  <span className="text-[10px] text-gray-400 block">Bot Conf</span>
-                  <span className="text-orange-400 font-semibold">{(t.bot_probability * 100).toFixed(2)}%</span>
+                  <span className="text-[10px] text-gray-400 block">Detection F1</span>
+                  <span className="text-blue-400 font-semibold">{t.f1 !== undefined ? t.f1.toFixed(3) : 'N/A'}</span>
                 </div>
                 <div className="p-2 rounded bg-[#161924] border border-[#232734]">
-                  <span className="text-[10px] text-gray-400 block">Human Conf</span>
-                  <span className="text-emerald-400 font-semibold">{(t.human_probability * 100).toFixed(2)}%</span>
+                  <span className="text-[10px] text-gray-400 block">Bot Conf</span>
+                  <span className="text-orange-400 font-semibold">{(t.bot_probability * 100).toFixed(1)}%</span>
                 </div>
               </div>
             </div>
