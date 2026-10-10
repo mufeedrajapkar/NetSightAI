@@ -229,6 +229,18 @@ def _seed_initial_flows():
                     print(f"[!] Initial seeding error for {t}: {exc}")
 
 
+def _get_model_metadata() -> dict:
+    """Load model_metadata.json to read training provenance and dataset type."""
+    meta_path = os.path.join(_REPO_ROOT, "ai", "models", "model_metadata.json")
+    if os.path.exists(meta_path):
+        try:
+            with open(meta_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"dataset_type": "synthetic prototype", "dataset_note": "Synthetic prototype baseline"}
+
+
 # ---------------------------------------------------------------------------
 # API Endpoints
 # ---------------------------------------------------------------------------
@@ -237,6 +249,7 @@ def _seed_initial_flows():
 def get_status():
     """Return system environment, Npcap readiness, and AI model status."""
     env = check_environment()
+    meta = _get_model_metadata()
     try:
         model = _BRIDGE.load_model()
         model_ready = True
@@ -255,6 +268,8 @@ def get_status():
         "model": {
             "is_loaded": model_ready,
             "model_type": model_type,
+            "dataset_type": meta.get("dataset_type", "synthetic prototype"),
+            "dataset_note": meta.get("dataset_note", "Synthetic prototype baseline"),
             "classes": model_classes,
             "contract_features": REQUIRED_FEATURES,
             "numerical_features": NUMERICAL_FEATURES,
@@ -277,6 +292,7 @@ def get_overview():
     with _STORE_LOCK:
         flows = list(_ANALYZED_FLOWS)
 
+    meta = _get_model_metadata()
     total_flows = len(flows)
     human_count = sum(1 for f in flows if f.get("predicted_label") == "Human")
     bot_count = sum(1 for f in flows if f.get("predicted_label") == "Bot")
@@ -287,6 +303,7 @@ def get_overview():
 
     return jsonify({
         "total_flows": total_flows,
+        "dataset_type": meta.get("dataset_type", "synthetic prototype"),
         "counts": {
             "human": human_count,
             "bot": bot_count,

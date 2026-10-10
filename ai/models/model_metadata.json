@@ -1,5 +1,8 @@
 {
     "model_name": "Logistic Regression",
+    "dataset_type": "synthetic prototype",
+    "dataset_path": "data\\raw\\sentinelnet_sample_500.csv",
+    "sample_count": 500,
     "feature_names": [
         "requests_per_sec",
         "session_duration",

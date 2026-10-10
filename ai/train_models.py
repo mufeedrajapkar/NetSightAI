@@ -35,6 +35,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+import argparse
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -427,14 +428,13 @@ def save_model_and_metadata(
     best_result: dict,
     numerical_features: list,
     categorical_features: list,
+    dataset_type: str = "synthetic prototype",
+    data_path: str = DATA_PATH,
+    sample_count: int = 500,
 ):
     """
     Save the best pipeline and a metadata JSON to ai/models/.
-
-    The saved pipeline accepts raw session feature dicts directly:
-      {requests_per_sec, session_duration, ..., protocol}
-
-    This supports future FastAPI integration without changes to the pipeline.
+    When dataset_type is 'synthetic prototype', also saves a permanent fallback copy.
     """
     print(f"\n{'='*60}")
     print("STEP 7: SAVE FINAL MODEL + METADATA")
@@ -447,8 +447,22 @@ def save_model_and_metadata(
     print(f"\n  Saved model -> {FINAL_MODEL_PATH}")
 
     # Build metadata — all values come from actual evaluation results
+    dataset_note = (
+        f"REAL NETWORK CAPTURE DATASET ({sample_count} sessions). "
+        "Evaluated via 5-fold Stratified CV and held-out test split on real lab traffic."
+        if dataset_type == "real"
+        else (
+            f"SYNTHETIC PROTOTYPE DATASET ({sample_count} sessions). "
+            "Metrics reflect prototype/baseline performance only. "
+            "Do NOT interpret as real-world network traffic performance."
+        )
+    )
+
     metadata = {
         "model_name":          best_name,
+        "dataset_type":        dataset_type,
+        "dataset_path":        os.path.relpath(data_path, BASE_DIR) if os.path.isabs(data_path) else data_path,
+        "sample_count":        sample_count,
         "feature_names":       numerical_features + categorical_features,
         "numerical_features":  numerical_features,
         "categorical_features": categorical_features,
@@ -471,23 +485,28 @@ def save_model_and_metadata(
             "f1_weighted":           best_result["f1_weighted"],
             "cv_f1_macro":           best_result["cv_f1_macro"],
         },
-        "dataset_note": (
-            "SYNTHETIC PROTOTYPE DATASET (500 sessions). "
-            "Metrics reflect prototype/baseline performance only. "
-            "Do NOT interpret as real-world network traffic performance."
-        ),
+        "dataset_note": dataset_note,
     }
 
     with open(METADATA_PATH, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
     print(f"  Saved metadata -> {METADATA_PATH}")
 
+    # Preserve synthetic baseline model as permanent fallback
+    fallback_model_path = os.path.join(MODELS_DIR, "synthetic_fallback_model.joblib")
+    fallback_meta_path = os.path.join(MODELS_DIR, "synthetic_model_metadata.json")
+    if dataset_type == "synthetic prototype" or not os.path.exists(fallback_model_path):
+        joblib.dump(best_result["pipeline"], fallback_model_path)
+        with open(fallback_meta_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=4)
+        print(f"  Preserved synthetic fallback model -> {fallback_model_path}")
+
 
 # ----------------------------------------------------------------------------─
 # CONFUSION MATRIX PLOT
 # ----------------------------------------------------------------------------─
 
-def plot_confusion_matrices(evaluation_results: dict, y_test: pd.Series):
+def plot_confusion_matrices(evaluation_results: dict, y_test: pd.Series, dataset_type: str = "synthetic prototype"):
     """
     Plot confusion matrices for all models side-by-side.
     Saved to ai/models/confusion_matrices.png
@@ -500,8 +519,8 @@ def plot_confusion_matrices(evaluation_results: dict, y_test: pd.Series):
         disp.plot(ax=ax, colorbar=False, cmap="Blues")
         ax.set_title(f"{model_name}\n(F1 macro: {res['f1_macro']:.3f})", fontsize=11)
 
-    plt.suptitle("Confusion Matrices — Network Session Classification\n"
-                 "(Synthetic Prototype Dataset)", fontsize=13, y=1.02)
+    title_dataset = "Real Lab Dataset" if dataset_type == "real" else "Synthetic Prototype Dataset"
+    plt.suptitle(f"Confusion Matrices — Network Session Classification\n({title_dataset})", fontsize=13, y=1.02)
     plt.tight_layout()
     save_path = os.path.join(MODELS_DIR, "confusion_matrices.png")
     os.makedirs(MODELS_DIR, exist_ok=True)
@@ -514,7 +533,7 @@ def plot_confusion_matrices(evaluation_results: dict, y_test: pd.Series):
 # COMPARISON BAR CHART
 # ----------------------------------------------------------------------------─
 
-def plot_model_comparison(evaluation_results: dict):
+def plot_model_comparison(evaluation_results: dict, dataset_type: str = "synthetic prototype"):
     """
     Bar chart comparing Accuracy, Precision, Recall, F1 across all models.
     Saved to ai/models/model_comparison.png
@@ -537,10 +556,10 @@ def plot_model_comparison(evaluation_results: dict):
             ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.005,
                     f"{val:.3f}", ha="center", va="bottom", fontsize=8)
 
+    title_dataset = "Real Lab Dataset" if dataset_type == "real" else "Synthetic Prototype Dataset"
     ax.set_xlabel("Model")
     ax.set_ylabel("Score")
-    ax.set_title("Model Comparison — Network Session Classification\n"
-                 "(Synthetic Prototype Dataset)")
+    ax.set_title(f"Model Comparison — Network Session Classification\n({title_dataset})")
     ax.set_xticks(x + width * 1.5)
     ax.set_xticklabels(models)
     ax.set_ylim(0, 1.10)
@@ -559,12 +578,37 @@ def plot_model_comparison(evaluation_results: dict):
 # ----------------------------------------------------------------------------─
 
 def main():
-    print("\nCN_AI — Network Session Classification Pipeline")
-    print("Dataset: SYNTHETIC PROTOTYPE (500 sessions)")
-    print("Target : Human | Bot | Suspicious\n")
+    parser = argparse.ArgumentParser(description="SentinelNet Machine Learning Training Pipeline")
+    parser.add_argument(
+        "--data",
+        default=DATA_PATH,
+        help="Path to training dataset CSV (default: data/raw/sentinelnet_sample_500.csv)",
+    )
+    parser.add_argument(
+        "--dataset-type",
+        choices=["real", "synthetic prototype"],
+        default=None,
+        help="Explicit dataset type declaration ('real' or 'synthetic prototype')",
+    )
+    args = parser.parse_args()
+
+    data_path = os.path.abspath(args.data)
+    if args.dataset_type:
+        dataset_type = args.dataset_type
+    elif "real" in data_path.lower():
+        dataset_type = "real"
+    else:
+        dataset_type = "synthetic prototype"
+
+    print("\n" + "=" * 65)
+    print("SENTINELNET AI TRAINING PIPELINE")
+    print("=" * 65)
+    print(f"  Dataset path : {data_path}")
+    print(f"  Dataset type : {dataset_type.upper()}")
+    print("  Target classes: Human | Bot | Suspicious\n")
 
     # 1. Load
-    df = load_data(DATA_PATH)
+    df = load_data(data_path)
 
     # 2. Define features (no leakage columns)
     numerical_features, categorical_features, target = define_features()
@@ -593,20 +637,32 @@ def main():
     best_name, best_result = select_best_model(evaluation_results)
 
     # 10. Save model and metadata
-    save_model_and_metadata(best_name, best_result, numerical_features, categorical_features)
+    save_model_and_metadata(
+        best_name=best_name,
+        best_result=best_result,
+        numerical_features=numerical_features,
+        categorical_features=categorical_features,
+        dataset_type=dataset_type,
+        data_path=data_path,
+        sample_count=len(df),
+    )
 
     # 11. Generate visualisations
-    plot_confusion_matrices(evaluation_results, y_test)
-    plot_model_comparison(evaluation_results)
+    plot_confusion_matrices(evaluation_results, y_test, dataset_type=dataset_type)
+    plot_model_comparison(evaluation_results, dataset_type=dataset_type)
 
     print(f"\n{'='*60}")
     print("PIPELINE COMPLETE")
     print(f"{'='*60}")
-    print(f"  Final model : {best_name}")
-    print(f"  Saved to    : {FINAL_MODEL_PATH}")
-    print(f"  Metadata    : {METADATA_PATH}")
-    print(f"\n  NOTE: Results are from a SYNTHETIC PROTOTYPE dataset.")
-    print(f"  Do not interpret metrics as real-world performance.\n")
+    print(f"  Final model  : {best_name}")
+    print(f"  Dataset type : {dataset_type}")
+    print(f"  Saved to     : {FINAL_MODEL_PATH}")
+    print(f"  Metadata     : {METADATA_PATH}")
+    if dataset_type == "synthetic prototype":
+        print(f"\n  NOTE: Results are from a SYNTHETIC PROTOTYPE dataset.")
+        print(f"  Do not interpret metrics as real-world performance.\n")
+    else:
+        print(f"\n  [+] Model successfully trained on real network session captures.\n")
 
 
 if __name__ == "__main__":

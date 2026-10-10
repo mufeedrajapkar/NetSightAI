@@ -75,9 +75,20 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-100 tracking-tight">
-            Network Intelligence Overview
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold text-gray-100 tracking-tight">
+              Network Intelligence Overview
+            </h2>
+            {data?.dataset_type === 'real' ? (
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono font-medium">
+                Dataset: Real Lab Captures
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-mono font-medium">
+                Dataset: Synthetic Prototype
+              </span>
+            )}
+          </div>
           <p className="text-xs text-gray-400 mt-1">
             Real-time multi-device behavioral telemetry, stateful flow aggregation, and AI classifications.
           </p>
@@ -130,10 +141,10 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
         />
         <StatCard
           title="Model Status"
-          value="Online"
-          subtext="LogisticRegression"
+          value={data?.dataset_type === 'real' ? 'Real Trained' : 'Synthetic'}
+          subtext={data?.model_type || "LogisticRegression"}
           icon={<Activity className="w-4 h-4" />}
-          accentColor="green"
+          accentColor={data?.dataset_type === 'real' ? "green" : "blue"}
         />
       </div>
 

@@ -56,6 +56,8 @@ export interface SystemStatus {
   model: {
     is_loaded: boolean
     model_type: string
+    dataset_type?: string
+    dataset_note?: string
     classes: string[]
     contract_features: string[]
     numerical_features: string[]
@@ -84,6 +86,7 @@ export interface CaptureStatusResponse {
 
 export interface OverviewData {
   total_flows: number
+  dataset_type?: string
   counts: {
     human: number
     bot: number

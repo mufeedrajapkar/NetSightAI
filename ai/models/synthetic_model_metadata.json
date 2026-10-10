@@ -1,0 +1,57 @@
+{
+    "model_name": "Logistic Regression",
+    "dataset_type": "synthetic prototype",
+    "dataset_path": "data\\raw\\sentinelnet_sample_500.csv",
+    "sample_count": 500,
+    "feature_names": [
+        "requests_per_sec",
+        "session_duration",
+        "packet_size_mean",
+        "packet_size_var",
+        "request_interval_mean",
+        "request_interval_var",
+        "bytes_transferred",
+        "num_connections",
+        "protocol"
+    ],
+    "numerical_features": [
+        "requests_per_sec",
+        "session_duration",
+        "packet_size_mean",
+        "packet_size_var",
+        "request_interval_mean",
+        "request_interval_var",
+        "bytes_transferred",
+        "num_connections"
+    ],
+    "categorical_features": [
+        "protocol"
+    ],
+    "target_classes": [
+        "Human",
+        "Bot",
+        "Suspicious"
+    ],
+    "training_config": {
+        "test_size": 0.2,
+        "random_state": 42,
+        "cv_folds": 5,
+        "scoring_metric": "f1_macro",
+        "class_weight": "balanced"
+    },
+    "best_hyperparameters": {
+        "classifier__C": 100,
+        "classifier__solver": "saga"
+    },
+    "evaluation_metrics": {
+        "accuracy": 0.91,
+        "precision_macro": 0.8988,
+        "recall_macro": 0.925,
+        "f1_macro": 0.9069,
+        "precision_weighted": 0.9186,
+        "recall_weighted": 0.91,
+        "f1_weighted": 0.9104,
+        "cv_f1_macro": 0.8866
+    },
+    "dataset_note": "SYNTHETIC PROTOTYPE DATASET (500 sessions). Metrics reflect prototype/baseline performance only. Do NOT interpret as real-world network traffic performance."
+}
