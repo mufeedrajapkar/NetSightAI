@@ -87,13 +87,20 @@ A minimalist, dark-themed network intelligence dashboard connecting the frontend
 
 ### Starting the Dashboard:
 
-#### 1. Start the Backend API Server:
+#### 1. Configure the API Key:
+Create a `.env` file in the project root (see `.env.example`):
 ```powershell
-.venv\Scripts\python CN\web\backend_server.py
+Copy-Item .env.example .env
+```
+Set `SENTINELNET_API_KEY=your-secure-random-key` in `.env` (or via `$env:SENTINELNET_API_KEY`). **The server will refuse to start without a configured API key.**
+
+#### 2. Start the Backend API Server:
+```powershell
+python CN\web\backend_server.py
 ```
 *(Runs on `http://127.0.0.1:5001`)*
 
-#### 2. Start the Frontend Dashboard:
+#### 3. Start the Frontend Dashboard:
 ```powershell
 cd frontend
 npm run dev

@@ -152,11 +152,13 @@ def run_mimicking_bot(
 
 import sys
 
+DEFAULT_INTERVALS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "human_intervals.csv")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SentinelNet Tier 3 Human-Mimicking Bot Traffic Generator")
     parser.add_argument("--target-url", default="http://127.0.0.1:5000", help="Target base URL (default: http://127.0.0.1:5000)")
     parser.add_argument("--duration", type=float, default=60.0, help="Duration to run in seconds (default: 60)")
-    parser.add_argument("--intervals-file", default="human_intervals.csv", help="Path to empirical human inter-arrival CSV (default: human_intervals.csv)")
+    parser.add_argument("--intervals-file", default=DEFAULT_INTERVALS_FILE, help=f"Path to empirical human inter-arrival CSV (default: {DEFAULT_INTERVALS_FILE})")
     parser.add_argument("--pause-chance", type=float, default=0.05, help="Probability of long think pause (default: 0.05)")
     parser.add_argument("--pause-min", type=float, default=5.0, help="Min long pause duration in seconds (default: 5.0)")
     parser.add_argument("--pause-max", type=float, default=15.0, help="Max long pause duration in seconds (default: 15.0)")

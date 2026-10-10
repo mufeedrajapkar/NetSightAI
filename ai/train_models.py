@@ -38,6 +38,7 @@ import matplotlib.pyplot as plt
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.model_selection import (
     train_test_split,
     StratifiedKFold,
     GridSearchCV,
@@ -443,7 +444,7 @@ def save_model_and_metadata(
 
     # Save the trained pipeline
     joblib.dump(best_result["pipeline"], FINAL_MODEL_PATH)
-    print(f"\n  Saved model → {FINAL_MODEL_PATH}")
+    print(f"\n  Saved model -> {FINAL_MODEL_PATH}")
 
     # Build metadata — all values come from actual evaluation results
     metadata = {
@@ -479,7 +480,7 @@ def save_model_and_metadata(
 
     with open(METADATA_PATH, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
-    print(f"  Saved metadata → {METADATA_PATH}")
+    print(f"  Saved metadata -> {METADATA_PATH}")
 
 
 # ----------------------------------------------------------------------------─
@@ -506,7 +507,7 @@ def plot_confusion_matrices(evaluation_results: dict, y_test: pd.Series):
     os.makedirs(MODELS_DIR, exist_ok=True)
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"\n  Saved confusion matrices → {save_path}")
+    print(f"\n  Saved confusion matrices -> {save_path}")
 
 
 # ----------------------------------------------------------------------------─
@@ -550,7 +551,7 @@ def plot_model_comparison(evaluation_results: dict):
     os.makedirs(MODELS_DIR, exist_ok=True)
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"  Saved model comparison chart → {save_path}")
+    print(f"  Saved model comparison chart -> {save_path}")
 
 
 # ----------------------------------------------------------------------------─

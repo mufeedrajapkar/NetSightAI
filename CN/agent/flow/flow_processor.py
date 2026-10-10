@@ -29,7 +29,7 @@ def _load_default_api_key() -> str:
                             return val
         except Exception:
             pass
-    return "sentinelnet-secret-key-change-me"
+    return None
 
 
 class FlowProcessor:
@@ -93,11 +93,14 @@ class FlowProcessor:
         if not target_url.endswith("/api/ingest"):
             target_url = f"{target_url}/api/ingest"
 
+        if not self.api_key:
+            print("[!] ERROR: Agent refusing to push: SENTINELNET_API_KEY is not configured. Provide api_key argument or set SENTINELNET_API_KEY in environment or .env.")
+            return False
+
         headers = {
             "Content-Type": "application/json",
+            "X-API-Key": self.api_key,
         }
-        if self.api_key:
-            headers["X-API-Key"] = self.api_key
 
         try:
             resp = requests.post(

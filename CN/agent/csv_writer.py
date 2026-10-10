@@ -7,15 +7,19 @@ FIELDS = [
     "device_id",
     "session_duration",
     "packets_per_sec",
+    "requests_per_sec",
     "packet_size_mean",
     "packet_size_var",
     "packet_interval_mean",
+    "request_interval_mean",
     "packet_interval_var",
+    "request_interval_var",
     "bytes_transferred",
     "packet_count",
+    "num_connections",
     "protocol",
     "label",
-    "bot_tier"
+    "bot_tier",
 ]
 
 
@@ -27,7 +31,8 @@ def save_to_csv(features, filename="sentinelnet_dataset.csv"):
 
         writer = csv.DictWriter(
             file,
-            fieldnames=FIELDS
+            fieldnames=FIELDS,
+            extrasaction="ignore",
         )
 
         if not file_exists:

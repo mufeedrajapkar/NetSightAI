@@ -79,7 +79,7 @@ def get_configured_api_key() -> str:
         except Exception:
             pass
 
-    return "sentinelnet-secret-key-change-me"
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -310,6 +310,11 @@ def ingest_flow():
 
     # 1. API Key Authentication
     expected_key = get_configured_api_key()
+    if not expected_key:
+        return jsonify({
+            "error": "Server configuration error: SENTINELNET_API_KEY is not configured on server"
+        }), 500
+
     provided_key = request.headers.get("X-API-Key")
 
     if not provided_key or provided_key != expected_key:
@@ -587,6 +592,14 @@ def stop_capture():
 # Server Entry Point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
+    configured_key = get_configured_api_key()
+    if not configured_key:
+        print("[!] FATAL ERROR: SENTINELNET_API_KEY is not set.", file=sys.stderr)
+        print("[!] The server refuses to start without a valid API key configured.", file=sys.stderr)
+        print("[!] Please set SENTINELNET_API_KEY in your environment, in a root .env file, or config.json.", file=sys.stderr)
+        print("[!] See .env.example for template.", file=sys.stderr)
+        sys.exit(1)
+
     _seed_initial_flows()
     port = 5001
     print(f"[*] Starting SentinelNet Web Intelligence API on http://127.0.0.1:{port}")

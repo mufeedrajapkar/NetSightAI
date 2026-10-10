@@ -25,7 +25,8 @@ from CN.agent.flow.flow_processor import FlowProcessor
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    monkeypatch.setenv("SENTINELNET_API_KEY", "test-secret-key-12345")
     app.config["TESTING"] = True
     _seed_initial_flows()
     with app.test_client() as c:
@@ -83,6 +84,15 @@ class TestIngestEndpointAuth:
         assert "probability_estimates" in data
         assert "flow" in data
         assert data["flow"]["device_id"] == "PC02"
+
+    def test_unconfigured_api_key_server_error(self, client, monkeypatch, sample_payload):
+        """TC-INGEST-AUTH-04: If server has no API key configured, /api/ingest returns 500 error."""
+        monkeypatch.delenv("SENTINELNET_API_KEY", raising=False)
+        with patch("CN.web.backend_server.get_configured_api_key", return_value=None):
+            res = client.post("/api/ingest", json=sample_payload, headers={"X-API-Key": "some-key"})
+            assert res.status_code == 500
+            assert "not configured" in res.get_json()["error"]
+
 
 
 class TestIngestPayloadProcessing:
@@ -198,3 +208,61 @@ class TestFlowProcessorNetworkPush:
                 content = f.read()
                 assert "sess_fallback_1" in content
                 assert "PC04" in content
+
+    def test_push_failure_graceful_fallback_real_extracted_features(self, tmp_path):
+        """Regression test: push failure with real extract_features() output does not crash on local CSV save."""
+        from CN.agent.features import extract_features
+        from CN.agent.label_manager import LabelManager
+
+        csv_path = str(tmp_path / "fallback_real.csv")
+        processor = FlowProcessor(
+            device_id="PC05",
+            label="Bot",
+            bot_tier="tier1",
+            csv_file=csv_path,
+            server_url="http://unreachable-host:9999",
+            api_key="mock-key",
+            push_to_server=True,
+            write_local_csv=False,
+        )
+
+        session = {
+            "session_id": "sess_real_fail_1",
+            "timestamps": [10.0, 10.2, 10.5],
+            "packet_sizes": [100, 200, 300],
+            "first_seen": 10.0,
+            "last_seen": 10.5,
+            "packet_count": 3,
+            "total_bytes": 600,
+            "protocol": "TCP",
+            "num_connections": 1,
+        }
+        features = extract_features(session)
+        labeled = LabelManager(device_id="PC05", label="Bot", bot_tier="tier1").add_labels(features)
+
+        with patch("requests.post", side_effect=Exception("Connection refused")):
+            processor.save_features(labeled)
+
+        assert os.path.exists(csv_path)
+        with open(csv_path, "r") as f:
+            content = f.read()
+            assert "sess_real_fail_1" in content
+            assert "PC05" in content
+            assert "num_connections" in content
+
+    def test_push_refused_without_api_key(self, monkeypatch):
+        """TC-AGENT-PUSH-03: Agent refuses to push if api_key is not configured."""
+        monkeypatch.delenv("SENTINELNET_API_KEY", raising=False)
+        processor = FlowProcessor(
+            device_id="PC01",
+            server_url="http://mock-server:5001",
+            api_key=None,
+            push_to_server=True,
+            write_local_csv=True,
+        )
+        with patch("requests.post") as mock_post:
+            success = processor._push_to_server({"session_id": "sess_1"})
+            assert success is False
+            assert not mock_post.called
+
+
