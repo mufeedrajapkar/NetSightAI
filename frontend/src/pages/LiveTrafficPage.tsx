@@ -1,12 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Play,
+  Square,
   AlertCircle,
   CheckCircle2,
   RefreshCw,
+  Radio,
 } from 'lucide-react'
-import type { FlowRecord, SystemStatus } from '../types'
-import { triggerReplay } from '../services/api'
+import type { FlowRecord, SystemStatus, CaptureStatusResponse } from '../types'
+import { triggerReplay, startCapture, stopCapture, fetchCaptureStatus } from '../services/api'
 
 interface LiveTrafficPageProps {
   flows: FlowRecord[]
@@ -26,6 +28,76 @@ export const LiveTrafficPage: React.FC<LiveTrafficPageProps> = ({
   const [replayingTier, setReplayingTier] = useState<string | null>(null)
   const [replaySuccess, setReplaySuccess] = useState<string | null>(null)
   const [replayError, setReplayError] = useState<string | null>(null)
+
+  // Live capture state
+  const [captureStatus, setCaptureStatus] = useState<CaptureStatusResponse | null>(null)
+  const [capturePort, setCapturePort] = useState<string>('5000')
+  const [captureFilter, setCaptureFilter] = useState<string>('')
+  const [captureIface, setCaptureIface] = useState<string>('')
+  const [captureLoading, setCaptureLoading] = useState<boolean>(false)
+  const [captureMsg, setCaptureMsg] = useState<string | null>(null)
+  const [captureError, setCaptureError] = useState<string | null>(null)
+
+  // Poll capture status every 2 seconds
+  useEffect(() => {
+    let mounted = true
+    const checkStatus = async () => {
+      try {
+        const st = await fetchCaptureStatus()
+        if (mounted) setCaptureStatus(st)
+      } catch (err) {
+        // server might be down or starting
+      }
+    }
+    checkStatus()
+    const interval = setInterval(checkStatus, 2500)
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
+  }, [])
+
+  const handleStartCapture = async () => {
+    try {
+      setCaptureLoading(true)
+      setCaptureError(null)
+      setCaptureMsg(null)
+      const options: any = {}
+      if (captureFilter.trim()) {
+        options.filter = captureFilter.trim()
+      } else if (capturePort.trim()) {
+        options.port = parseInt(capturePort.trim(), 10)
+      }
+      if (captureIface.trim()) {
+        options.interface = captureIface.trim()
+      }
+      const res = await startCapture(options)
+      setCaptureMsg(res.message || 'Live capture started successfully.')
+      const st = await fetchCaptureStatus()
+      setCaptureStatus(st)
+    } catch (err: any) {
+      setCaptureError(err.message || 'Failed to start live packet capture')
+    } finally {
+      setCaptureLoading(false)
+    }
+  }
+
+  const handleStopCapture = async () => {
+    try {
+      setCaptureLoading(true)
+      setCaptureError(null)
+      setCaptureMsg(null)
+      const res = await stopCapture()
+      setCaptureMsg(`${res.message} (${res.packets_captured} packets captured, ${res.packets_parsed} parsed into flows)`)
+      const st = await fetchCaptureStatus()
+      setCaptureStatus(st)
+      onRefresh()
+    } catch (err: any) {
+      setCaptureError(err.message || 'Failed to stop live capture')
+    } finally {
+      setCaptureLoading(false)
+    }
+  }
 
   const handleReplay = async (tier: string) => {
     try {
@@ -83,6 +155,125 @@ export const LiveTrafficPage: React.FC<LiveTrafficPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Live Packet Sniffer Controller */}
+      <div className="p-6 rounded-xl bg-[#12141d] border border-[#202432]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-200">
+                Live Packet Sniffer (Scapy / Npcap)
+              </h3>
+              {captureStatus?.is_capturing ? (
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  SNIFFING ACTIVE
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-500/10 text-gray-400 border border-gray-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                  STOPPED
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              Asynchronously capture live TCP/IP frames on network interfaces and stream them to the AI classification pipeline.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleStartCapture}
+              disabled={captureLoading || captureStatus?.is_capturing}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors shadow-sm shadow-emerald-900/30"
+            >
+              <Radio className={`w-3.5 h-3.5 ${captureStatus?.is_capturing ? 'animate-pulse' : ''}`} />
+              Start Capture
+            </button>
+            <button
+              onClick={handleStopCapture}
+              disabled={captureLoading || !captureStatus?.is_capturing}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors shadow-sm shadow-rose-900/30"
+            >
+              <Square className="w-3.5 h-3.5" />
+              Stop Capture
+            </button>
+          </div>
+        </div>
+
+        {/* Live Sniffer Configuration & Telemetry Row */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 rounded-lg bg-[#151822] border border-[#232734]">
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1">
+              Target Port
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. 5000"
+              value={capturePort}
+              onChange={(e) => setCapturePort(e.target.value)}
+              disabled={captureStatus?.is_capturing}
+              className="w-full px-3 py-1.5 rounded bg-[#10121a] border border-[#2c3245] text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1">
+              Interface (Optional)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. eth0"
+              value={captureIface}
+              onChange={(e) => setCaptureIface(e.target.value)}
+              disabled={captureStatus?.is_capturing}
+              className="w-full px-3 py-1.5 rounded bg-[#10121a] border border-[#2c3245] text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1">
+              BPF Filter (Optional)
+            </label>
+            <input
+              type="text"
+              placeholder="tcp and port 5000"
+              value={captureFilter}
+              onChange={(e) => setCaptureFilter(e.target.value)}
+              disabled={captureStatus?.is_capturing}
+              className="w-full px-3 py-1.5 rounded bg-[#10121a] border border-[#2c3245] text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1">
+              Live Packets Seen
+            </label>
+            <div className="text-sm font-mono font-semibold text-emerald-400 py-1">
+              {captureStatus?.packets_seen ?? 0}
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1">
+              Active Filter / Interface
+            </label>
+            <div className="text-xs font-mono text-gray-300 truncate py-1" title={captureStatus?.filter || 'None'}>
+              {captureStatus?.filter || 'tcp and port 5000'}
+            </div>
+          </div>
+        </div>
+
+        {/* Status Alerts */}
+        {captureMsg && (
+          <div className="mt-4 p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/40 text-emerald-400 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{captureMsg}</span>
+          </div>
+        )}
+        {captureError && (
+          <div className="mt-4 p-3 rounded-lg bg-rose-950/30 border border-rose-800/40 text-rose-400 text-xs flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{captureError}</span>
+          </div>
+        )}
+      </div>
 
       {/* PCAP Replay Control Matrix */}
       <div className="p-6 rounded-xl bg-[#12141d] border border-[#202432]">

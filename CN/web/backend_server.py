@@ -38,7 +38,10 @@ from CN.agent.capture.packet_capture import (
     check_environment,
     DEFAULT_BPF_FILTER,
     get_loopback_interface,
+    build_bpf_filter,
+    is_windows,
 )
+from CN.agent.flow.flow_processor import FlowProcessor
 from CN.agent.ai_bridge import AIBridge, REQUIRED_FEATURES, NUMERICAL_FEATURES, SUPPORTED_PROTOCOLS
 
 app = Flask(__name__)
@@ -90,11 +93,54 @@ _ANALYZED_FLOWS: List[Dict[str, Any]] = []
 _ACTIVE_CAPTURE: Dict[str, Any] = {
     "is_capturing": False,
     "capture_instance": None,
-    "mode": "PCAP Replay",
+    "processor": None,
+    "mode": "PCAP Replay (Offline)",
     "start_time": None,
+    "interface": None,
+    "filter": None,
 }
 
 _BRIDGE = AIBridge()
+
+
+class _ServerCaptureProcessor(FlowProcessor):
+    """Custom FlowProcessor that automatically classifies completed sessions and adds them to _ANALYZED_FLOWS."""
+    def save_features(self, features):
+        super().save_features(features)
+        try:
+            pred_result = _BRIDGE.predict(features)
+            flow_id = features.get("session_id") or f"flow_live_{int(time.time()*1000)%1000000}"
+            flow_record = {
+                "flow_id": flow_id,
+                "session_id": flow_id,
+                "device_id": features.get("device_id", "ServerCapture"),
+                "tier": features.get("bot_tier", "Live"),
+                "source_type": "Server Live Capture",
+                "source_file": "Live Sniffer Interface",
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                "epoch_time": time.time(),
+                "expected_label": features.get("label", "Unknown"),
+                "predicted_label": pred_result["prediction"],
+                "is_match": (pred_result["prediction"].lower() == str(features.get("label", "")).lower()) if features.get("label") and features.get("label") != "Unknown" else None,
+                "model_type": pred_result.get("model_type", "LogisticRegression"),
+                "probability_estimates": pred_result.get("probability_estimates", {}),
+                "features": pred_result.get("features_used", {}),
+                "metadata": {
+                    **pred_result.get("metadata", {}),
+                    "device_id": features.get("device_id", "ServerCapture"),
+                    "session_id": flow_id,
+                },
+                "packet_count": int(features.get("packet_count", 0)),
+                "raw_packet_count": int(features.get("packet_count", 0)),
+                "session_duration": float(features.get("session_duration", 0.0)),
+                "bytes_transferred": int(features.get("bytes_transferred", 0)),
+                "protocol": features.get("protocol", "TCP"),
+            }
+            with _STORE_LOCK:
+                _ANALYZED_FLOWS.append(flow_record)
+        except Exception as exc:
+            print(f"[!] Server live capture classification error: {exc}")
+
 
 
 # ---------------------------------------------------------------------------
@@ -218,6 +264,9 @@ def get_status():
         "active_capture": {
             "is_capturing": _ACTIVE_CAPTURE["is_capturing"],
             "start_time": _ACTIVE_CAPTURE["start_time"],
+            "interface": _ACTIVE_CAPTURE.get("interface"),
+            "filter": _ACTIVE_CAPTURE.get("filter"),
+            "packets_seen": len(_ACTIVE_CAPTURE["capture_instance"].raw_packets) if _ACTIVE_CAPTURE.get("capture_instance") else 0,
         },
     })
 
@@ -567,25 +616,137 @@ def get_architecture():
 
 @app.route("/api/capture/start", methods=["POST"])
 def start_capture():
-    """Start live capture (if supported)."""
+    """Start real live packet capture on server interface."""
     env = check_environment()
-    if not env["can_capture_live"]:
+    if not env["pcap_available"]:
         return jsonify({
-            "error": "Live capture is not currently available. Use PCAP Replay to analyse traffic.",
+            "error": "Live capture unavailable: Npcap is not installed or libpcap provider unavailable.",
             "details": env["message"],
             "setup_guide": env["setup_guide"],
         }), 400
 
+    if is_windows() and not env["is_admin"]:
+        return jsonify({
+            "error": "Live capture unavailable: Server process is not running as Administrator on Windows.",
+            "details": env["message"],
+            "setup_guide": env["setup_guide"],
+        }), 400
+
+    with _STORE_LOCK:
+        if _ACTIVE_CAPTURE["is_capturing"]:
+            cap = _ACTIVE_CAPTURE.get("capture_instance")
+            return jsonify({
+                "error": "Live packet capture is already active",
+                "status": "running",
+                "packets": len(cap.raw_packets) if cap else 0,
+            }), 409
+
+        data = request.get_json(silent=True) or {}
+        chosen_filter = build_bpf_filter(
+            filter_str=data.get("filter"),
+            port=data.get("port"),
+            all_ip=bool(data.get("all_ip", False)),
+        )
+        chosen_iface = data.get("interface") or env.get("loopback_iface")
+        device_id = str(data.get("device_id") or "ServerCapture")
+        label = str(data.get("label") or "Human")
+        bot_tier = str(data.get("bot_tier") or "Live")
+
+        proc = _ServerCaptureProcessor(
+            device_id=device_id,
+            label=label,
+            bot_tier=bot_tier,
+            write_local_csv=False,
+        )
+        cap = PacketCapture(
+            bpf_filter=chosen_filter,
+            interface=chosen_iface,
+            processor=proc,
+            device_id=device_id,
+            label=label,
+            bot_tier=bot_tier,
+        )
+
+        try:
+            cap.start()
+        except Exception as exc:
+            return jsonify({
+                "error": f"Failed to start sniffer on interface '{chosen_iface}': {str(exc)}"
+            }), 500
+
+        _ACTIVE_CAPTURE["is_capturing"] = True
+        _ACTIVE_CAPTURE["capture_instance"] = cap
+        _ACTIVE_CAPTURE["processor"] = proc
+        _ACTIVE_CAPTURE["start_time"] = time.time()
+        _ACTIVE_CAPTURE["interface"] = chosen_iface
+        _ACTIVE_CAPTURE["filter"] = chosen_filter
+        _ACTIVE_CAPTURE["mode"] = "Live Capture"
+
     return jsonify({
-        "message": "Live capture started",
-        "filter": DEFAULT_BPF_FILTER,
+        "message": "Live packet capture started successfully",
+        "status": "running",
+        "interface": chosen_iface,
+        "filter": chosen_filter,
     })
 
 
 @app.route("/api/capture/stop", methods=["POST"])
 def stop_capture():
-    """Stop live capture."""
-    return jsonify({"message": "Capture stopped"})
+    """Stop live packet capture and flush remaining sessions."""
+    with _STORE_LOCK:
+        if not _ACTIVE_CAPTURE["is_capturing"] or not _ACTIVE_CAPTURE.get("capture_instance"):
+            return jsonify({
+                "message": "No active packet capture to stop",
+                "status": "stopped",
+            }), 200
+
+        cap = _ACTIVE_CAPTURE["capture_instance"]
+        proc = _ACTIVE_CAPTURE.get("processor")
+
+        cap.stop()
+        if proc:
+            try:
+                proc.save_all_sessions()
+            except Exception as exc:
+                print(f"[!] Error flushing sessions on capture stop: {exc}")
+
+        packets_seen = len(cap.raw_packets)
+        parsed_seen = len(cap.parsed_packets)
+
+        _ACTIVE_CAPTURE["is_capturing"] = False
+        _ACTIVE_CAPTURE["capture_instance"] = None
+        _ACTIVE_CAPTURE["processor"] = None
+        _ACTIVE_CAPTURE["mode"] = "PCAP Replay (Offline)"
+
+    return jsonify({
+        "message": "Live packet capture stopped successfully",
+        "status": "stopped",
+        "packets_captured": packets_seen,
+        "packets_parsed": parsed_seen,
+    })
+
+
+@app.route("/api/capture/status", methods=["GET"])
+def get_capture_status():
+    """Return real-time sniffer runtime status."""
+    with _STORE_LOCK:
+        is_cap = _ACTIVE_CAPTURE["is_capturing"]
+        cap = _ACTIVE_CAPTURE.get("capture_instance")
+        pkts = len(cap.raw_packets) if cap else 0
+        parsed = len(cap.parsed_packets) if cap else 0
+        start_t = _ACTIVE_CAPTURE.get("start_time")
+        duration = (time.time() - start_t) if (is_cap and start_t) else 0.0
+
+    return jsonify({
+        "is_capturing": is_cap,
+        "status": "running" if is_cap else "stopped",
+        "interface": _ACTIVE_CAPTURE.get("interface"),
+        "filter": _ACTIVE_CAPTURE.get("filter"),
+        "packets_seen": pkts,
+        "packets_parsed": parsed,
+        "start_time": start_t,
+        "duration": round(duration, 2),
+    })
 
 
 # ---------------------------------------------------------------------------

@@ -67,3 +67,46 @@ export async function fetchArchitecture(): Promise<ArchitectureResponse> {
   }
   return res.json()
 }
+
+export async function startCapture(options?: {
+  filter?: string
+  port?: number
+  all_ip?: boolean
+  interface?: string
+}): Promise<{ message: string; status: string; interface: string; filter: string }> {
+  const res = await fetch(`${API_BASE}/capture/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(options || {}),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(err.error || err.details || 'Failed to start live capture')
+  }
+  return res.json()
+}
+
+export async function stopCapture(): Promise<{
+  message: string
+  status: string
+  packets_captured: number
+  packets_parsed: number
+}> {
+  const res = await fetch(`${API_BASE}/capture/stop`, {
+    method: 'POST',
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(err.error || 'Failed to stop live capture')
+  }
+  return res.json()
+}
+
+export async function fetchCaptureStatus(): Promise<any> {
+  const res = await fetch(`${API_BASE}/capture/status`)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch capture status: ${res.statusText}`)
+  }
+  return res.json()
+}
+

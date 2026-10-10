@@ -31,6 +31,29 @@ from CN.agent.ai_bridge import AIBridge, classify_flow
 DEFAULT_BPF_FILTER = "tcp and (src port 5000 or dst port 5000)"
 
 
+def build_bpf_filter(
+    filter_str: Optional[str] = None,
+    port: Optional[int] = None,
+    all_ip: bool = False,
+    custom_filter: Optional[str] = None,
+) -> str:
+    """
+    Build a safe, validated BPF filter string.
+    - If all_ip is True: returns "ip" (captures all IPv4 traffic)
+    - If filter_str or custom_filter is specified: returns the custom filter string
+    - If port is specified: returns f"tcp and (src port {port} or dst port {port})"
+    - Default: DEFAULT_BPF_FILTER ("tcp and (src port 5000 or dst port 5000)")
+    """
+    if all_ip:
+        return "ip"
+    custom = filter_str or custom_filter
+    if custom and str(custom).strip():
+        return str(custom).strip()
+    if port is not None:
+        return f"tcp and (src port {int(port)} or dst port {int(port)})"
+    return DEFAULT_BPF_FILTER
+
+
 def is_windows() -> bool:
     """Return True if running on Windows OS."""
     return sys.platform.startswith("win")
@@ -295,3 +318,51 @@ class PacketCapture:
 
         ai_bridge = bridge or AIBridge()
         return ai_bridge.predict(latest_features)
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="SentinelNet - Packet Capture Engine")
+    parser.add_argument("--filter", dest="bpf_filter", default=None, help="Custom BPF filter string (e.g. 'tcp port 8080')")
+    parser.add_argument("--port", type=int, default=None, help="Target port for BPF filtering (e.g. 5000)")
+    parser.add_argument("--all-ip", action="store_true", help="Capture all IPv4 traffic ('ip' filter)")
+    parser.add_argument("--interface", default=None, help="Network interface name or GUID")
+    parser.add_argument("--duration", type=float, default=10.0, help="Capture duration in seconds (default: 10)")
+    parser.add_argument("--device-id", default="PC01", help="Device identifier (default: PC01)")
+    parser.add_argument("--label", default="Human", help="Ground-truth label (default: Human)")
+    parser.add_argument("--bot-tier", default="None", help="Bot sophistication tier (default: None)")
+    parser.add_argument("--output-pcap", default=None, help="Optional PCAP file path to save captured packets")
+
+    args = parser.parse_args()
+
+    env = check_environment()
+    print("[*] SentinelNet Packet Capture Engine")
+    print(f"[*] Environment diagnosis: {env['message']}")
+    if not env["can_capture_live"]:
+        print(f"[!] Requirements missing:\n{env['setup_guide']}")
+        sys.exit(1)
+
+    chosen_filter = build_bpf_filter(filter_str=args.bpf_filter, port=args.port, all_ip=args.all_ip)
+    chosen_iface = args.interface or env.get("loopback_iface")
+
+    print(f"[*] Interface: {chosen_iface or 'Default OS Interface'}")
+    print(f"[*] BPF Filter: {chosen_filter}")
+    print(f"[*] Sniffing for {args.duration}s...")
+
+    cap = PacketCapture(
+        bpf_filter=chosen_filter,
+        interface=chosen_iface,
+        device_id=args.device_id,
+        label=args.label,
+        bot_tier=args.bot_tier,
+    )
+    cap.start(timeout=args.duration)
+    time.sleep(args.duration + 0.5)
+    cap.stop()
+
+    print(f"[+] Capture stopped. Raw packets seen: {len(cap.raw_packets)}, Parsed: {len(cap.parsed_packets)}")
+    if args.output_pcap and cap.raw_packets:
+        cap.save_pcap(args.output_pcap)
+        print(f"[+] Saved PCAP to {args.output_pcap}")
+

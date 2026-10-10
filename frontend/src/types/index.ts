@@ -65,7 +65,21 @@ export interface SystemStatus {
   active_capture: {
     is_capturing: boolean
     start_time: number | null
+    interface?: string | null
+    filter?: string | null
+    packets_seen?: number
   }
+}
+
+export interface CaptureStatusResponse {
+  is_capturing: boolean
+  status: 'running' | 'stopped'
+  interface: string | null
+  filter: string | null
+  packets_seen: number
+  packets_parsed: number
+  start_time: number | null
+  duration: number
 }
 
 export interface OverviewData {
