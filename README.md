@@ -98,7 +98,7 @@ Set `SENTINELNET_API_KEY=your-secure-random-key` in `.env` (or via `$env:SENTINE
 ```powershell
 python CN\web\backend_server.py
 ```
-*(Runs on `http://127.0.0.1:5001`)*
+*(Runs on `http://127.0.0.1:5000`)*
 
 #### 3. Start the Frontend Dashboard:
 ```powershell
@@ -108,10 +108,10 @@ npm run dev
 *(Open `http://127.0.0.1:5173` in your browser)*
 
 ### Dashboard Capabilities:
-- **Overview**: Real-time summary cards, multi-device security threat matrix, prediction distribution donut chart, and recent flow telemetry.
-- **Live Traffic**: Live multi-device session stream and manual Tier 1, 2, and 3 PCAP replay.
-- **AI Analysis**: In-depth inspection of the 9 model contract features and class probability estimates.
-- **Bot Analysis**: 3-tier comparative matrix and domain shift explanation.
+- **Overview**: Real-time summary cards, multi-device security threat matrix, prediction distribution donut chart, and recent flow telemetry with dataset provenance indicator (`real` vs `synthetic prototype`).
+- **Live Traffic**: Live multi-device session stream, start/stop live packet sniffing, and manual Tier 1, 2, and 3 PCAP replay.
+- **AI Analysis**: In-depth inspection of the 9 model contract features, Isolation Forest anomaly score, and class probability estimates.
+- **Bot Analysis**: 3-tier comparative matrix with real empirical F1 difficulty curve plot, least-separated features (Cohen's d), and Tier 4 Adversarial Evasion Robustness Benchmark.
 - **Architecture**: End-to-end pipeline topology and domain breakdown (Computer Networks vs AI).
 - **About Project**: Project one-liner, objectives, and actual technology stack.
 
@@ -131,45 +131,54 @@ copy .env.example .env
 
 # Edit .env with your shared secret
 SENTINELNET_API_KEY=your_shared_lab_secret_key
-SENTINELNET_SERVER_URL=http://<CENTRAL_SERVER_IP>:5001
+SENTINELNET_SERVER_URL=http://<CENTRAL_SERVER_IP>:5000
 ```
 
 **Via PowerShell:**
 ```powershell
 $env:SENTINELNET_API_KEY = "your_shared_lab_secret_key"
-$env:SENTINELNET_SERVER_URL = "http://192.168.1.100:5001"
+$env:SENTINELNET_SERVER_URL = "http://192.168.1.100:5000"
 ```
 
 ### 2. Run Capture Agents on Lab PCs
 On each lab PC (e.g., PC01, PC02, PC03), run the capture agent with streaming enabled:
 
 ```powershell
-python -m CN.agent.capture.test_capture --device-id PC02 --duration 60 --label Bot --bot-tier Tier1 --push --server-url http://192.168.1.100:5001
+python -m CN.agent.capture.test_capture --device-id PC02 --duration 60 --label Bot --bot-tier Tier1 --push --server-url http://192.168.1.100:5000
 ```
 
-**Key Flags:**
-- `--push`: Enables live pushing of completed sessions to `/api/ingest`.
-- `--server-url <URL>`: Points to the central backend server (defaults to `SENTINELNET_SERVER_URL` env var).
-- `--api-key <KEY>`: Overrides API key (defaults to `SENTINELNET_API_KEY` env var or `.env`).
-- `--no-local-csv`: Skips local CSV writes on successful network push (still saves to local CSV automatically if server is unreachable).
+Or run the dedicated standalone capture CLI:
+```powershell
+python CN\agent\run_agent.py --device-id PC01 --duration 60 --label Human --push
+```
 
 ### 3. Graceful Fallback
 If the central server goes down or is unreachable, the agent automatically logs the error and saves all sessions to the local CSV without crashing.
 
 ---
 
+## 🚀 One-Command End-to-End System Demonstration
 
-## 🖥️ CLI Final Academic Demonstration
-
-Run the automated offline PCAP replay across all three bot tiers:
+Run the automated full-system demonstration:
 
 ```powershell
-.venv\Scripts\python CN\demos\run_final_demo.py
+python run_demo.py
 ```
+
+This starts an embedded server, ingests Human, Bot, and Anomalous traffic via `/api/ingest`, queries the Isolation Forest anomaly detector, runs the hybrid Suspicious consensus engine, and prints the Bot Tier and Adversarial evaluation benchmarks.
+
+### 🧪 Model Training & Dataset Pipeline
+
+- **Data Collection Runbook**: `docs/DATA_COLLECTION.md`
+- **Aggregate Captures**: `python ai/build_dataset.py --input-dir CN/data/raw --output data/processed/sentinelnet_real_dataset.csv`
+- **Train Classifier**: `python ai/train_models.py --data data/processed/sentinelnet_real_dataset.csv`
+- **Train Anomaly Detector**: `python ai/anomaly_detection.py`
+- **Bot Tier Difficulty Analysis**: `python ai/bot_tier_analysis.py`
+- **Adversarial Robustness Evaluation**: `python ai/adversarial_eval.py`
 
 ### 🚀 Pipeline Summary
 
 ```text
-Traffic Source → Packet Capture / PCAP Replay → Packet Parser → Flow Tracking → Feature Extraction → AI Bridge → ML Classifier → Dashboard
+Traffic Source → Packet Capture / PCAP Replay → Packet Parser → Flow Tracking → Feature Extraction → AI Bridge (Classifier + Isolation Forest) → Hybrid Verdict Engine → Dashboard
 ```
 

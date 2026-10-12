@@ -182,57 +182,48 @@ Human / Bot / Suspicious
         ↓
 SHAP explanation
 
-## 13. WHAT THE AI MODULE DOES NOT DO
+## 13. ANOMALY DETECTION & HYBRID VERDICT PIPELINE
 
-The AI module currently does NOT:
-- capture network packets
-- perform packet sniffing itself
-- perform MITM
-- inspect HTTPS payloads
-- generate bot traffic
-- perform bot-tier experimentation
-- contain DWM functionality
-- provide the final frontend/dashboard
-- provide the final FastAPI integration
+In addition to supervised classification, SentinelNet includes an unsupervised **Isolation Forest** pipeline:
+- **Baseline Training**: Fitted strictly on benign `Human` sessions with a 5% contamination factor (`ai/models/isolation_forest.joblib`).
+- **Hybrid Decision Engine**: If the supervised classifier outputs `Human` but the Isolation Forest flags an anomaly (`is_anomaly == True`), the final verdict is escalated to `Suspicious` (`verdict_reason: "anomaly_detector_disagreement"`).
+- **Confidence Guardrail**: If classifier top probability is `< 0.6`, the verdict is routed to `Suspicious` (`verdict_reason: "low_confidence"`).
 
-Those are outside the current AI module scope.
+## 14. WHAT THE AI MODULE DOES NOT DO
 
-## 14. FILE GUIDE
+The AI module does NOT:
+- perform MITM or SSL decryption
+- inspect encrypted application payloads (L7 body contents)
+- contain Data Warehousing & Mining (DWM) components
 
-- `ai/train_models.py` → training, preprocessing, CV, GridSearchCV, model comparison, final model saving
+## 15. FILE GUIDE
+
+- `ai/train_models.py` → training, preprocessing, CV, GridSearchCV, model comparison, parameterized `--data` retraining
+- `ai/build_dataset.py` → dataset aggregator and schema validator across multi-PC captures
+- `ai/anomaly_detection.py` → Isolation Forest anomaly detector trained on benign Human baseline
+- `ai/bot_tier_analysis.py` → empirical per-tier F1, recall, precision, and Cohen's d feature separation analysis
+- `ai/adversarial_eval.py` → Tier 4 delay and packet-shaping adversarial evasion benchmark
 - `ai/evaluate.py` → evaluation, metrics, confusion matrices, inference testing
 - `ai/explainability.py` → SHAP explanations
 - `ai/test_prediction.py` → standalone single-session inference test
-- `ai/CONTRACT.md` → formal CN → AI input contract
-- `ai/models/final_model.joblib` → trained final pipeline
-- `ai/models/model_metadata.json` → model and experiment metadata
+- `ai/CONTRACT.md` → formal CN → AI input contract with hybrid verdict rules
+- `ai/models/final_model.joblib` → trained final classification pipeline
+- `ai/models/isolation_forest.joblib` → trained Isolation Forest anomaly detection artifact
+- `ai/models/bot_tier_results.json` → empirical tier benchmark results and metrics
+- `ai/models/adversarial_results.json` → adversarial evasion rates and countermeasures
+- `ai/models/bot_tier_curve.png` → generated F1 difficulty curve plot
+- `ai/models/model_metadata.json` → model and experiment provenance metadata
 - `notebooks/01_data_exploration.ipynb` → dataset exploration and EDA
-
-## 15. IMPORTANT INTEGRATION RULES FOR TEAM MEMBERS
-
-1. Do not rename the 9 AI input fields without discussion.
-2. Do not send `session_id` as a model feature.
-3. Do not send `label` during live inference.
-4. Do not send `bot_tier` during live inference.
-5. Ensure CN feature calculations match the definitions expected by the AI module.
-6. Do not change preprocessing independently in the CN module.
-7. The saved AI pipeline already contains preprocessing.
-8. If the CN module produces differently named features, map them explicitly before inference.
-9. Do not assume synthetic-dataset performance represents real-world performance.
-10. Integration should preserve the validated AI pipeline.
 
 ## 16. CURRENT STATUS
 
-**AI MODULE V1 = VALIDATED AND INTEGRATION-READY**
+**AI MODULE + CN INTEGRATION = VERIFIED & FULLY OPERATIONAL**
 
 Verified:
-- no data leakage
-- reproducible training/evaluation
-- saved model loads
-- single-session inference works
-- probabilities work
-- SHAP explanation works
-- AI-CN contract exists
-- EDA completed
-
-The next major stage is: **CN MODULE + AI MODULE INTEGRATION**
+- No data leakage; strict column validation
+- Reproducible training/evaluation on synthetic baseline and real PCAP captures
+- Isolation Forest anomaly detection operational
+- Dynamic Suspicious verdict escalation operational
+- Empirical Bot Tier difficulty curve generated and exposed
+- Tier 4 Adversarial evasion suite benchmarked
+- Single-session and batch inference through `AIBridge` verified with 102 automated tests
