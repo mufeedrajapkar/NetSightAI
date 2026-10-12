@@ -5,27 +5,32 @@ import {
   HelpCircle,
   TrendingDown,
   RefreshCw,
+  ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react'
-import type { BotTiersResponse } from '../types'
-import { fetchBotTiers } from '../services/api'
+import type { BotTiersResponse, AdversarialResponse } from '../types'
+import { fetchBotTiers, fetchAdversarial } from '../services/api'
 
 export const BotAnalysisPage: React.FC = () => {
   const [data, setData] = useState<BotTiersResponse | null>(null)
+  const [adversarial, setAdversarial] = useState<AdversarialResponse | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
   const loadData = () => {
     setLoading(true)
     setError(null)
-    fetchBotTiers()
-      .then((res) => {
-        setData(res)
-        setLoading(false)
-      })
-      .catch((err: any) => {
-        setError(err.message || 'Failed to load bot tier evaluations')
-        setLoading(false)
-      })
+    Promise.allSettled([fetchBotTiers(), fetchAdversarial()]).then(([tiersRes, advRes]) => {
+      if (tiersRes.status === 'fulfilled') {
+        setData(tiersRes.value)
+      } else {
+        setError(tiersRes.reason?.message || 'Failed to load bot tier evaluations')
+      }
+      if (advRes.status === 'fulfilled') {
+        setAdversarial(advRes.value)
+      }
+      setLoading(false)
+    })
   }
 
   useEffect(() => {
@@ -280,6 +285,103 @@ export const BotAnalysisPage: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Adversarial Evasion Benchmark (Tier 4) */}
+      {adversarial && adversarial.scenarios && (
+        <div className="p-6 rounded-xl bg-[#12141d] border border-rose-950/40 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <ShieldAlert className="w-5 h-5 text-rose-400" />
+              <div>
+                <h3 className="text-sm font-semibold text-gray-100">
+                  Tier 4 Adversarial Evasion Robustness Benchmark
+                </h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Evaluates classifier, Isolation Forest, and hybrid defense resilience against delay & feature-shaping bots.
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">
+              Provenance: {adversarial.benchmark_provenance}
+            </span>
+          </div>
+
+          {/* Scenario Comparison Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(adversarial.scenarios).map(([key, sc]: [string, any]) => (
+              <div key={key} className="p-4 rounded-lg bg-[#0e1017] border border-[#1e2230] space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold text-gray-200 capitalize">
+                    {key.replace(/_/g, ' ')}
+                  </h4>
+                  <span className="text-[10px] font-mono text-gray-400">
+                    N = {sc.total_sessions} sessions
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  {sc.description}
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-2 border-t border-[#1a1d28]">
+                  <div className="p-2 rounded bg-[#161924] border border-[#232734]">
+                    <span className="text-[10px] text-gray-400 block">Classifier Evasion</span>
+                    <span className="text-rose-400 font-semibold">
+                      {(sc.classifier_evasion_rate * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="p-2 rounded bg-[#161924] border border-[#232734]">
+                    <span className="text-[10px] text-gray-400 block">Suspicious Rescue</span>
+                    <span className="text-amber-400 font-semibold">
+                      {(sc.suspicious_rescue_rate * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="p-2 rounded bg-[#161924] border border-[#232734]">
+                    <span className="text-[10px] text-gray-400 block">Outright Bot Verdict</span>
+                    <span className="text-emerald-400 font-semibold">
+                      {(sc.bot_detection_rate * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="p-2 rounded bg-[#161924] border border-[#232734]">
+                    <span className="text-[10px] text-gray-400 block">Net Evasion Rate</span>
+                    <span className="text-purple-400 font-semibold">
+                      {(sc.hybrid_sentinelnet_evasion_rate * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Vulnerability & Recommended Countermeasures */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+            <div className="p-4 rounded-lg bg-[#0e1017] border border-amber-900/30 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                Vulnerability Analysis
+              </div>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                {adversarial.vulnerability_analysis}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg bg-[#0e1017] border border-blue-900/30 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-blue-300">
+                <ShieldCheck className="w-4 h-4 text-blue-400" />
+                Recommended Evasion Countermeasures
+              </div>
+              <div className="space-y-1.5">
+                {adversarial.recommended_countermeasures.map((c, i) => (
+                  <div key={i} className="text-[11px] text-gray-300 flex items-start gap-1.5">
+                    <span className="text-blue-400 font-semibold shrink-0">[{c.dimension}]</span>
+                    <span><strong>{c.feature}:</strong> {c.rationale}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

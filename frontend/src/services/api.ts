@@ -4,6 +4,7 @@ import type {
   FlowRecord,
   BotTiersResponse,
   ArchitectureResponse,
+  AdversarialResponse,
 } from '../types'
 
 const API_BASE = '/api'
@@ -106,6 +107,14 @@ export async function fetchCaptureStatus(): Promise<any> {
   const res = await fetch(`${API_BASE}/capture/status`)
   if (!res.ok) {
     throw new Error(`Failed to fetch capture status: ${res.statusText}`)
+  }
+  return res.json()
+}
+
+export async function fetchAdversarial(): Promise<AdversarialResponse> {
+  const res = await fetch(`${API_BASE}/adversarial`)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch adversarial benchmark: ${res.statusText}`)
   }
   return res.json()
 }

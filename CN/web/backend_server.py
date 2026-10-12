@@ -571,6 +571,24 @@ def get_bot_tier_curve():
     return jsonify({"error": "Bot tier curve plot not found. Run ai/bot_tier_analysis.py first."}), 404
 
 
+@app.route("/api/adversarial", methods=["GET"])
+def get_adversarial_results():
+    """Return Tier 4 adversarial evaluation benchmark results."""
+    adv_path = os.path.join(_REPO_ROOT, "ai", "models", "adversarial_results.json")
+    if not os.path.exists(adv_path):
+        return jsonify({
+            "error": "Adversarial results not found. Run ai/adversarial_eval.py first.",
+            "status": "not_run"
+        }), 404
+
+    try:
+        with open(adv_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return jsonify(data)
+    except Exception as exc:
+        return jsonify({"error": f"Failed to load adversarial results: {exc}"}), 500
+
+
 @app.route("/api/architecture", methods=["GET"])
 def get_architecture():
     """Return pipeline stages, component descriptions, and validation status."""

@@ -157,3 +157,32 @@ export interface ArchitectureResponse {
     artificial_intelligence: string[]
   }
 }
+
+export interface AdversarialScenario {
+  description: string
+  total_sessions: number
+  classifier_evasion_rate: number
+  isolation_forest_evasion_rate: number
+  hybrid_sentinelnet_evasion_rate: number
+  suspicious_rescue_rate: number
+  bot_detection_rate: number
+  mean_anomaly_score: number | null
+  disagreement_rate: number
+}
+
+export interface AdversarialCountermeasure {
+  dimension: string
+  feature: string
+  rationale: string
+}
+
+export interface AdversarialResponse {
+  status: string
+  benchmark_provenance: string
+  scenarios: {
+    delay_mimicry_only?: AdversarialScenario
+    full_feature_mimicry?: AdversarialScenario
+  }
+  vulnerability_analysis: string
+  recommended_countermeasures: AdversarialCountermeasure[]
+}
