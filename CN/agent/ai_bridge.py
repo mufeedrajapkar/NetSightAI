@@ -37,6 +37,7 @@ _THIS_FILE = os.path.abspath(__file__)
 # CN/agent/ai_bridge.py  →  CN/agent  →  CN  →  repo root
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(_THIS_FILE)))
 DEFAULT_MODEL_PATH = os.path.join(BASE_DIR, "ai", "models", "final_model.joblib")
+DEFAULT_IF_PATH = os.path.join(BASE_DIR, "ai", "models", "isolation_forest.joblib")
 
 
 # ---------------------------------------------------------------------------
@@ -103,12 +104,45 @@ class AIBridge:
     The model pipeline is loaded lazily on first use and then cached for the
     lifetime of this object so repeated calls do not re-read the file.
     """
+    model_path: str = DEFAULT_MODEL_PATH
+    if_path: str = DEFAULT_IF_PATH
+    confidence_threshold: float = 0.6
+    _model = None
+    _classes: list = None
+    _model_type: str = None
+    _if_model = None
+    _if_loaded: bool = False
 
-    def __init__(self, model_path: str = None):
+    def __init__(self, model_path: str = None, if_path: str = None, confidence_threshold: float = 0.6):
         self.model_path: str = model_path or DEFAULT_MODEL_PATH
+        self.if_path: str = if_path or DEFAULT_IF_PATH
+        self.confidence_threshold: float = confidence_threshold
         self._model = None          # cached scikit-learn Pipeline
         self._classes: list = None  # list of class-label strings, from model.classes_
         self._model_type: str = None
+        self._if_model = None       # cached Isolation Forest pipeline
+        self._if_loaded: bool = False
+
+    def load_isolation_forest(self):
+        """
+        Load Isolation Forest pipeline lazily.
+        If file is missing or unreadable, returns None without raising.
+        """
+        if getattr(self, "_if_loaded", False):
+            return getattr(self, "_if_model", None)
+
+        target_path = getattr(self, "if_path", DEFAULT_IF_PATH)
+        if os.path.exists(target_path):
+            try:
+                self._if_model = joblib.load(target_path)
+            except Exception as exc:
+                print(f"[!] Warning: Failed to load Isolation Forest from {target_path}: {exc}")
+                self._if_model = None
+        else:
+            self._if_model = None
+
+        self._if_loaded = True
+        return self._if_model
 
     # ------------------------------------------------------------------
     # Model loading
@@ -312,6 +346,37 @@ class AIBridge:
             for cls, prob in zip(self._classes, raw_probabilities)
         }
 
+        # Score with Isolation Forest lazily (if available)
+        if_model = self.load_isolation_forest()
+        anomaly_score = None
+        is_anomaly = None
+        if if_model is not None:
+            try:
+                # Invert decision_function so higher positive values represent higher anomaly
+                raw_decision = float(if_model.decision_function(input_df)[0])
+                anomaly_score = round(float(-raw_decision), 4)
+                if_pred = if_model.predict(input_df)[0]
+                is_anomaly = bool(if_pred == -1)
+            except Exception as exc:
+                print(f"[!] Warning: Anomaly scoring failed: {exc}")
+
+        # Compute runtime Suspicious verdict
+        # Rule (a): Classifier says Human but Isolation Forest flags anomaly -> Suspicious
+        # Rule (b): Top probability < confidence_threshold -> Suspicious
+        top_prob = max(probability_estimates.values()) if probability_estimates else 0.0
+
+        if raw_prediction == "Human" and is_anomaly is True:
+            verdict = "Suspicious"
+            verdict_reason = "anomaly_detector_disagreement"
+        elif top_prob < self.confidence_threshold:
+            verdict = "Suspicious"
+            verdict_reason = f"low_confidence ({top_prob:.3f} < {self.confidence_threshold})"
+        else:
+            verdict = str(raw_prediction)
+            verdict_reason = "classifier_consensus"
+
+        disagreement = (str(raw_prediction) != verdict)
+
         # Collect only metadata fields that were actually supplied by CN.
         # We never invent fields that are not in the input.
         metadata = {
@@ -321,7 +386,15 @@ class AIBridge:
         }
 
         return {
-            "prediction": prediction,
+            "prediction": verdict,
+            "verdict": verdict,
+            "raw_prediction": str(raw_prediction),
+            "disagreement": disagreement,
+            "verdict_reason": verdict_reason,
+            "anomaly_score": anomaly_score,
+            "is_anomaly": is_anomaly,
+            "top_probability": round(float(top_prob), 6),
+            "confidence_threshold": self.confidence_threshold,
             "probability_estimates": probability_estimates,
             "model_type": self._model_type,
             "features_used": clean_features,

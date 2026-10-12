@@ -1,16 +1,16 @@
 # AI-CN Integration Contract (V1)
 
-This document defines the data interface between the future Computer Networks (CN) module and the current AI/ML classification module for the CN_AI project.
+This document defines the data interface between the Computer Networks (CN) module and the AI/ML classification module for SentinelNet.
 
 ## Purpose
 
-The AI module is responsible for classifying network sessions as `Human`, `Bot`, or `Suspicious`. The CN module will be responsible for capturing raw network traffic and producing session-level statistics. 
+The AI module is responsible for classifying network sessions as `Human`, `Bot`, or `Suspicious`. The CN module captures raw network traffic and produces session-level statistics. 
 
 This contract specifies exactly what fields the CN module must provide to the AI module for live classification.
 
 ## Expected Input Schema
 
-The CN module must pass a single record (e.g. JSON object or dictionary) to the AI module containing the following 9 fields:
+The CN module passes a single record (e.g. JSON object or dictionary) to the AI module containing the following 9 features:
 
 | Field Name | Data Type | Expected Meaning / Description |
 |------------|-----------|---------------------------------|
@@ -26,31 +26,64 @@ The CN module must pass a single record (e.g. JSON object or dictionary) to the 
 
 ### Excluded Fields (Do Not Send to Classifier)
 
-The following fields are present in the synthetic dataset but must **NOT** be passed to the live ML model for prediction:
+The following metadata fields may be present in CN sessions but must **NOT** be passed to the ML classifier for prediction:
 * `session_id`: Identifier only, no predictive value.
-* `device_id`: Excluded to prevent the model from memorizing specific devices.
+* `device_id`: Excluded to prevent the model from memorizing specific network nodes.
 * `timestamp`: Not used as a raw predictive feature.
-* `label`: This is the target that the AI predicts.
-* `bot_tier`: Ground-truth metadata only.
+* `label`: Ground-truth target only.
+* `bot_tier`: Ground-truth difficulty metadata only.
 
 ## Expected AI Output
 
-The AI module will process the input record through its preprocessing pipeline and classification model. It will conceptually return an output in the following format:
+The AI module processes the input record through its preprocessing pipeline, classification model, and unsupervised Isolation Forest anomaly detector. It returns a structured dictionary:
 
 ```json
 {
-    "prediction": "Bot", 
-    "probabilities": {
-        "Bot": 0.9869,
-        "Human": 0.0110,
-        "Suspicious": 0.0021
+    "prediction": "Suspicious",
+    "verdict": "Suspicious",
+    "raw_prediction": "Human",
+    "disagreement": true,
+    "verdict_reason": "anomaly_detector_disagreement",
+    "anomaly_score": 0.0824,
+    "is_anomaly": true,
+    "top_probability": 0.6541,
+    "confidence_threshold": 0.6,
+    "probability_estimates": {
+        "Human": 0.6541,
+        "Bot": 0.2450,
+        "Suspicious": 0.1009
+    },
+    "model_type": "LogisticRegression",
+    "features_used": {
+        "requests_per_sec": 4.5,
+        "session_duration": 12.0,
+        "packet_size_mean": 650.0,
+        "packet_size_var": 45000.0,
+        "request_interval_mean": 0.22,
+        "request_interval_var": 0.015,
+        "bytes_transferred": 78000,
+        "num_connections": 1,
+        "protocol": "TCP"
+    },
+    "metadata": {
+        "session_id": "sess_1001",
+        "device_id": "PC01"
     }
 }
 ```
 
-* **`prediction`**: String. One of `["Human", "Bot", "Suspicious"]`.
-* **`probabilities`**: Dictionary mapping classes to confidence scores. Note: The meaning and calibration of these scores depends on the underlying model (e.g., Logistic Regression outputs calibrated probabilities).
+### Runtime "Suspicious" Verdict Determination
 
-## Note on Synthetic Data
+The final operational verdict is computed dynamically according to the following deterministic priority rules:
+1. **Anomaly Detector Disagreement**: If the classifier's `raw_prediction` is `Human` but the Isolation Forest flags `is_anomaly == True`, the final verdict is escalated to **`Suspicious`** (`verdict_reason: "anomaly_detector_disagreement"`).
+2. **Low Classification Confidence**: If the classifier's highest probability score is below the confidence threshold (default `0.6`), the verdict is set to **`Suspicious`** (`verdict_reason: "low_confidence"`).
+3. **Classifier Consensus**: Otherwise, the final verdict accepts the classifier's `raw_prediction` (`verdict_reason: "classifier_consensus"`).
 
-The current iteration of the AI module (V1) is trained on a **SYNTHETIC PROTOTYPE DATASET**. The performance metrics and patterns learned reflect this synthetic data and should be considered a prototype/baseline. Do not interpret current performance as indicative of real-world network traffic classification accuracy.
+Both `raw_prediction` and `verdict` are explicitly returned to allow the dashboard to display disagreements and security escalation alerts.
+
+## Note on Synthetic Data vs Real Data
+
+SentinelNet supports training on both synthetic prototype data and real lab packet captures:
+- When trained on synthetic data, metadata is stamped with `"dataset_type": "synthetic prototype"`.
+- When trained on real multi-PC lab captures, metadata is stamped with `"dataset_type": "real"`.
+All dashboard panels and APIs reflect this provenance.

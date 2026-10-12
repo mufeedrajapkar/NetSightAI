@@ -68,14 +68,32 @@ export const FlowDetailsModal: React.FC<FlowDetailsModalProps> = ({ flow, onClos
 
         {/* Content Body */}
         <div className="p-6 space-y-6 overflow-y-auto">
+          {/* Anomaly Disagreement Alert Banner */}
+          {(flow.disagreement || (flow.raw_prediction === 'Human' && flow.predicted_label === 'Suspicious')) && (
+            <div className="p-4 rounded-lg bg-rose-950/30 border border-rose-800/40 flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <div className="font-semibold text-rose-300">
+                  Anomaly Disagreement Alert: Verdict Escalated to Suspicious
+                </div>
+                <div className="text-gray-300 leading-relaxed">
+                  Supervised classifier estimated <strong className="text-emerald-400 font-mono">Human</strong>, but the unsupervised Isolation Forest flagged the session as anomalous (Anomaly Score: <span className="font-mono text-rose-400 font-semibold">{flow.anomaly_score !== undefined && flow.anomaly_score !== null ? flow.anomaly_score.toFixed(4) : 'Flagged'}</span>). The operational verdict was escalated to <strong className="text-rose-400 font-mono">Suspicious</strong>.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Classification Banner */}
           <div className="p-4 rounded-lg bg-[#161924] border border-[#252a38] flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">
-                Classification Result
+                Final Operational Verdict
               </div>
               <div className="flex items-center gap-3">
-                {getPredictionBadge(flow.predicted_label)}
+                {getPredictionBadge(flow.verdict || flow.predicted_label)}
+                <span className="text-xs text-gray-400">
+                  Raw Classifier: <strong className="text-gray-200">{flow.raw_prediction || flow.predicted_label}</strong>
+                </span>
                 <span className="text-xs text-gray-400">
                   Expected: <strong className="text-gray-200">{flow.expected_label}</strong>
                 </span>
@@ -92,8 +110,11 @@ export const FlowDetailsModal: React.FC<FlowDetailsModalProps> = ({ flow, onClos
             </div>
 
             <div className="text-right">
-              <div className="text-[11px] text-gray-400">Classifier</div>
+              <div className="text-[11px] text-gray-400">Classifier / Anomaly Model</div>
               <div className="text-xs font-mono font-medium text-gray-200">{flow.model_type}</div>
+              <div className="text-[11px] font-mono text-gray-400 mt-0.5">
+                Anomaly Score: {flow.anomaly_score !== undefined && flow.anomaly_score !== null ? flow.anomaly_score.toFixed(4) : 'N/A'}
+              </div>
             </div>
           </div>
 

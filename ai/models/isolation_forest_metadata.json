@@ -1,0 +1,66 @@
+{
+    "model_name": "IsolationForest",
+    "contamination": 0.05,
+    "n_estimators": 150,
+    "random_state": 42,
+    "features": [
+        "requests_per_sec",
+        "session_duration",
+        "packet_size_mean",
+        "packet_size_var",
+        "request_interval_mean",
+        "request_interval_var",
+        "bytes_transferred",
+        "num_connections",
+        "protocol"
+    ],
+    "numerical_features": [
+        "requests_per_sec",
+        "session_duration",
+        "packet_size_mean",
+        "packet_size_var",
+        "request_interval_mean",
+        "request_interval_var",
+        "bytes_transferred",
+        "num_connections"
+    ],
+    "categorical_features": [
+        "protocol"
+    ],
+    "training_row_count": 200,
+    "dataset_path": "data\\raw\\sentinelnet_sample_500.csv",
+    "dataset_type": "synthetic prototype",
+    "anomaly_decision_boundary": "decision_function < 0 or anomaly_score > 0",
+    "evaluation_on_full_dataset": {
+        "Human": {
+            "total": 200,
+            "anomalies": 10,
+            "anomaly_rate": 0.05
+        },
+        "Bot": {
+            "total": 200,
+            "anomalies": 13,
+            "anomaly_rate": 0.065
+        },
+        "Suspicious": {
+            "total": 100,
+            "anomalies": 49,
+            "anomaly_rate": 0.49
+        },
+        "Bot_Tier1": {
+            "total": 77,
+            "anomalies": 7,
+            "anomaly_rate": 0.0909
+        },
+        "Bot_Tier2": {
+            "total": 70,
+            "anomalies": 4,
+            "anomaly_rate": 0.0571
+        },
+        "Bot_Tier3": {
+            "total": 53,
+            "anomalies": 2,
+            "anomaly_rate": 0.0377
+        }
+    }
+}

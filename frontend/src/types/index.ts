@@ -28,6 +28,12 @@ export interface FlowRecord {
   epoch_time: number
   expected_label: string
   predicted_label: 'Human' | 'Bot' | 'Suspicious' | string
+  verdict?: 'Human' | 'Bot' | 'Suspicious' | string
+  raw_prediction?: string
+  disagreement?: boolean
+  verdict_reason?: string
+  anomaly_score?: number | null
+  is_anomaly?: boolean | null
   is_match: boolean | null
   model_type: string
 
