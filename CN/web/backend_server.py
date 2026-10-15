@@ -803,5 +803,6 @@ if __name__ == "__main__":
 
     _seed_initial_flows()
     port = 5001
-    print(f"[*] Starting SentinelNet Web Intelligence API on http://127.0.0.1:{port}")
-    app.run(host="127.0.0.1", port=port, debug=False)
+    host = os.environ.get("SENTINELNET_HOST", "0.0.0.0")
+    print(f"[*] Starting SentinelNet Web Intelligence API on http://{host}:{port}")
+    app.run(host=host, port=port, debug=False)
