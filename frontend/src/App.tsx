@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react'
 import { Sidebar } from './components/Sidebar'
 import type { NavTab } from './components/Sidebar'
@@ -24,6 +25,7 @@ export const App: React.FC = () => {
   const loadAllData = async (silent: boolean = false) => {
     try {
       if (!silent) setLoading(true)
+
       const [statusRes, overviewRes, flowsRes] = await Promise.all([
         fetchStatus().catch(() => null),
         fetchOverview().catch(() => null),
@@ -32,32 +34,34 @@ export const App: React.FC = () => {
 
       if (statusRes) setStatus(statusRes)
       if (overviewRes) setOverview(overviewRes)
-      if (flowsRes && flowsRes.flows) setFlows(flowsRes.flows)
+      if (flowsRes?.flows) setFlows(flowsRes.flows)
     } finally {
       if (!silent) setLoading(false)
     }
   }
 
   useEffect(() => {
-    loadAllData(false)
+    void loadAllData(false)
   }, [])
 
-  // Live background polling every 3.5s
   useEffect(() => {
     if (!autoRefresh) return
-    const intervalId = setInterval(() => {
-      loadAllData(true)
+
+    const intervalId = window.setInterval(() => {
+      void loadAllData(true)
     }, 3500)
-    return () => clearInterval(intervalId)
+
+    return () => window.clearInterval(intervalId)
   }, [autoRefresh])
 
   return (
-    <div className="flex h-screen bg-[#0c0d12] text-gray-100 overflow-hidden font-sans">
-      {/* Sidebar Navigation */}
-      <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
+    <div className="app-shell">
+      <Sidebar
+        currentTab={currentTab}
+        onSelectTab={setCurrentTab}
+      />
 
-      {/* Main Content Viewport */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="app-main">
         <TopBar
           status={status}
           loading={loading}
@@ -65,40 +69,40 @@ export const App: React.FC = () => {
           onToggleAutoRefresh={() => setAutoRefresh((prev) => !prev)}
         />
 
+        <main className="app-viewport" key={currentTab}>
+          <div className="app-page-transition">
+            {currentTab === 'overview' && (
+              <OverviewPage
+                data={overview}
+                loading={loading}
+                onRefresh={loadAllData}
+                onSelectFlow={setSelectedFlow}
+                onNavigateTab={setCurrentTab}
+              />
+            )}
 
-        <main className="flex-1 overflow-y-auto">
-          {currentTab === 'overview' && (
-            <OverviewPage
-              data={overview}
-              loading={loading}
-              onRefresh={loadAllData}
-              onSelectFlow={setSelectedFlow}
-              onNavigateTab={setCurrentTab}
-            />
-          )}
+            {currentTab === 'traffic' && (
+              <LiveTrafficPage
+                flows={flows}
+                status={status}
+                loading={loading}
+                onSelectFlow={setSelectedFlow}
+                onRefresh={loadAllData}
+              />
+            )}
 
-          {currentTab === 'traffic' && (
-            <LiveTrafficPage
-              flows={flows}
-              status={status}
-              loading={loading}
-              onSelectFlow={setSelectedFlow}
-              onRefresh={loadAllData}
-            />
-          )}
-
-          {currentTab === 'ai' && <AIAnalysisPage flows={flows} />}
-
-          {currentTab === 'bots' && <BotAnalysisPage />}
-
-          {currentTab === 'architecture' && <ArchitecturePage />}
-
-          {currentTab === 'about' && <AboutPage />}
+            {currentTab === 'ai' && <AIAnalysisPage flows={flows} />}
+            {currentTab === 'bots' && <BotAnalysisPage />}
+            {currentTab === 'architecture' && <ArchitecturePage />}
+            {currentTab === 'about' && <AboutPage />}
+          </div>
         </main>
       </div>
 
-      {/* Flow Details Modal */}
-      <FlowDetailsModal flow={selectedFlow} onClose={() => setSelectedFlow(null)} />
+      <FlowDetailsModal
+        flow={selectedFlow}
+        onClose={() => setSelectedFlow(null)}
+      />
     </div>
   )
 }

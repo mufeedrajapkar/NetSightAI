@@ -45,7 +45,7 @@ export const LiveTrafficPage: React.FC<LiveTrafficPageProps> = ({
       try {
         const st = await fetchCaptureStatus()
         if (mounted) setCaptureStatus(st)
-      } catch (err) {
+      } catch {
         // server might be down or starting
       }
     }

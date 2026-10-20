@@ -1,45 +1,307 @@
+
 @import "tailwindcss";
 
+/* =========================================
+   SENTINELNET — DESIGN SYSTEM
+   ========================================= */
+
 :root {
-  --bg-main: #0c0d12;
-  --bg-card: #13151c;
-  --bg-card-hover: #181b24;
-  --border-subtle: #232734;
-  --border-muted: #1c202b;
-  --text-primary: #f3f4f6;
-  --text-muted: #9ca3af;
-  --text-dim: #6b7280;
-  
-  --color-human: #10b981;
-  --color-bot: #f97316;
-  --color-suspicious: #ef4444;
-  --color-info: #3b82f6;
+  color-scheme: dark;
+
+  --bg-main: #080d18;
+  --bg-sidebar: #0a1020;
+  --bg-card: #101827;
+  --bg-card-hover: #152033;
+  --bg-elevated: #131e30;
+
+  --border-subtle: #243149;
+  --border-muted: #1a2639;
+  --border-active: #315477;
+
+  --text-primary: #edf4ff;
+  --text-secondary: #b0bfd3;
+  --text-muted: #8594aa;
+  --text-dim: #627189;
+
+  --accent: #38bdf8;
+  --accent-hover: #7dd3fc;
+  --accent-soft: rgba(56, 189, 248, 0.12);
+  --accent-glow: rgba(56, 189, 248, 0.08);
+
+  --color-human: #34d399;
+  --color-bot: #fb923c;
+  --color-suspicious: #f87171;
+  --color-info: #60a5fa;
+  --color-warning: #fbbf24;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.16);
+  --transition-fast: 160ms ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  scroll-behavior: smooth;
+  scrollbar-color: #34445d #0a1020;
 }
 
 body {
   margin: 0;
-  background-color: var(--bg-main);
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      ellipse at 75% 0%,
+      rgba(26, 70, 112, 0.12),
+      transparent 42%
+    ),
+    var(--bg-main);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+::selection {
+  color: #ffffff;
+  background: #075985;
+}
+
+/* =========================================
+   MAIN APPLICATION LAYOUT
+   ========================================= */
+
+.app-shell {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-viewport {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
+.app-page-transition {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  animation: page-enter 220ms ease-out;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0.7;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================
+   CARDS AND PANELS
+   ========================================= */
+
+:where(.app-shell) :is(
+  .card,
+  .panel,
+  .stat-card,
+  .metric-card,
+  .chart-card
+) {
+  border-color: var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+:where(.app-shell) :is(
+  .card,
+  .panel,
+  .stat-card,
+  .metric-card,
+  .chart-card
+):hover {
+  border-color: #30415b;
+}
+
+/* =========================================
+   TABLES
+   ========================================= */
+
+:where(.app-shell) table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+:where(.app-shell) th {
+  color: var(--text-muted);
+  background: rgba(15, 23, 42, 0.65);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+:where(.app-shell) th,
+:where(.app-shell) td {
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+:where(.app-shell) tbody tr {
+  transition: background var(--transition-fast);
+}
+
+:where(.app-shell) tbody tr:hover {
+  background: rgba(56, 189, 248, 0.045);
+}
+
+:where(.app-shell) tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* =========================================
+   FORM CONTROLS
+   ========================================= */
+
+:where(.app-shell) input,
+:where(.app-shell) select,
+:where(.app-shell) textarea {
+  max-width: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: #0c1423;
+  color: var(--text-primary);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+:where(.app-shell) input::placeholder,
+:where(.app-shell) textarea::placeholder {
+  color: var(--text-dim);
+}
+
+:where(.app-shell) input:focus,
+:where(.app-shell) select:focus,
+:where(.app-shell) textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+
+/* =========================================
+   SCROLLBARS
+   ========================================= */
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0c0d12;
+  background: #0a1020;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #232734;
-  border-radius: 3px;
+  border: 1px solid #0a1020;
+  border-radius: 20px;
+  background: #34445d;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #506783;
+}
+
+/* =========================================
+   ACCESSIBILITY AND RESPONSIVENESS
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    height: 100dvh;
+  }
+
+  .app-viewport {
+    scrollbar-gutter: auto;
+  }
 }
