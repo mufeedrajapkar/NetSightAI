@@ -1,0 +1,273 @@
+{
+    "generated_at": "2026-10-11T00:00:51.962872",
+    "model_type": "LogisticRegression",
+    "dataset_type": "synthetic prototype",
+    "dataset_path": "data\\raw\\sentinelnet_sample_500.csv",
+    "tiers": [
+        {
+            "id": "tier1",
+            "name": "Tier 1 - Naive Bot",
+            "sophistication": "Low",
+            "description": "Fixed 0.5s interval requests against single endpoint; deterministic timing profile.",
+            "sample_count": 77,
+            "expected_label": "Bot",
+            "baseline_result": "Match (Bot)",
+            "detection_rate": 1.0,
+            "precision": 0.8556,
+            "recall": 1.0,
+            "f1": 0.9222,
+            "bot_probability": 0.961098,
+            "human_probability": 0.009223,
+            "least_separated_features": [
+                {
+                    "feature": "bytes_transferred",
+                    "cohens_d": 0.2851,
+                    "human_mean": 110083.745,
+                    "tier_mean": 137037.7792
+                },
+                {
+                    "feature": "packet_size_mean",
+                    "cohens_d": 0.5701,
+                    "human_mean": 698.2889,
+                    "tier_mean": 602.0977
+                },
+                {
+                    "feature": "request_interval_var",
+                    "cohens_d": 0.8948,
+                    "human_mean": 0.9588,
+                    "tier_mean": 0.005
+                }
+            ],
+            "all_feature_separation": [
+                {
+                    "feature": "bytes_transferred",
+                    "cohens_d": 0.2851,
+                    "human_mean": 110083.745,
+                    "tier_mean": 137037.7792
+                },
+                {
+                    "feature": "packet_size_mean",
+                    "cohens_d": 0.5701,
+                    "human_mean": 698.2889,
+                    "tier_mean": 602.0977
+                },
+                {
+                    "feature": "request_interval_var",
+                    "cohens_d": 0.8948,
+                    "human_mean": 0.9588,
+                    "tier_mean": 0.005
+                },
+                {
+                    "feature": "packet_size_var",
+                    "cohens_d": 1.0351,
+                    "human_mean": 145692.3575,
+                    "tier_mean": 49146.5649
+                },
+                {
+                    "feature": "session_duration",
+                    "cohens_d": 1.1805,
+                    "human_mean": 94.6458,
+                    "tier_mean": 38.5876
+                },
+                {
+                    "feature": "num_connections",
+                    "cohens_d": 1.4368,
+                    "human_mean": 6.17,
+                    "tier_mean": 10.0649
+                },
+                {
+                    "feature": "request_interval_mean",
+                    "cohens_d": 1.7554,
+                    "human_mean": 0.8071,
+                    "tier_mean": 0.1696
+                },
+                {
+                    "feature": "requests_per_sec",
+                    "cohens_d": 4.694,
+                    "human_mean": 1.7341,
+                    "tier_mean": 5.9963
+                }
+            ],
+            "behavior_notes": "Least separated features from Human: bytes_transferred, packet_size_mean, request_interval_var. Mean bot confidence: 96.11%, mean human confidence: 0.92%."
+        },
+        {
+            "id": "tier2",
+            "name": "Tier 2 - Jittered Bot",
+            "sophistication": "Medium",
+            "description": "Uniform random delays (0.2s - 2.0s), randomized queries, rotating User-Agents.",
+            "sample_count": 70,
+            "expected_label": "Bot",
+            "baseline_result": "Match (Bot)",
+            "detection_rate": 0.9429,
+            "precision": 0.8354,
+            "recall": 0.9429,
+            "f1": 0.8859,
+            "bot_probability": 0.879514,
+            "human_probability": 0.044384,
+            "least_separated_features": [
+                {
+                    "feature": "packet_size_mean",
+                    "cohens_d": 0.3573,
+                    "human_mean": 698.2889,
+                    "tier_mean": 632.1313
+                },
+                {
+                    "feature": "bytes_transferred",
+                    "cohens_d": 0.4435,
+                    "human_mean": 110083.745,
+                    "tier_mean": 163199.3429
+                },
+                {
+                    "feature": "session_duration",
+                    "cohens_d": 0.6947,
+                    "human_mean": 94.6458,
+                    "tier_mean": 58.168
+                }
+            ],
+            "all_feature_separation": [
+                {
+                    "feature": "packet_size_mean",
+                    "cohens_d": 0.3573,
+                    "human_mean": 698.2889,
+                    "tier_mean": 632.1313
+                },
+                {
+                    "feature": "bytes_transferred",
+                    "cohens_d": 0.4435,
+                    "human_mean": 110083.745,
+                    "tier_mean": 163199.3429
+                },
+                {
+                    "feature": "session_duration",
+                    "cohens_d": 0.6947,
+                    "human_mean": 94.6458,
+                    "tier_mean": 58.168
+                },
+                {
+                    "feature": "request_interval_var",
+                    "cohens_d": 0.8919,
+                    "human_mean": 0.9588,
+                    "tier_mean": 0.008
+                },
+                {
+                    "feature": "packet_size_var",
+                    "cohens_d": 0.9082,
+                    "human_mean": 145692.3575,
+                    "tier_mean": 59041.8824
+                },
+                {
+                    "feature": "request_interval_mean",
+                    "cohens_d": 1.4983,
+                    "human_mean": 0.8071,
+                    "tier_mean": 0.2564
+                },
+                {
+                    "feature": "num_connections",
+                    "cohens_d": 1.9374,
+                    "human_mean": 6.17,
+                    "tier_mean": 11.0571
+                },
+                {
+                    "feature": "requests_per_sec",
+                    "cohens_d": 2.1122,
+                    "human_mean": 1.7341,
+                    "tier_mean": 4.305
+                }
+            ],
+            "behavior_notes": "Least separated features from Human: packet_size_mean, bytes_transferred, session_duration. Mean bot confidence: 87.95%, mean human confidence: 4.44%."
+        },
+        {
+            "id": "tier3",
+            "name": "Tier 3 - Mimicking Bot",
+            "sophistication": "High",
+            "description": "Empirical human delay distribution, reading pauses (5-15s), realistic browsing paths.",
+            "sample_count": 53,
+            "expected_label": "Bot",
+            "baseline_result": "Match (Bot)",
+            "detection_rate": 0.8113,
+            "precision": 0.7679,
+            "recall": 0.8113,
+            "f1": 0.789,
+            "bot_probability": 0.706212,
+            "human_probability": 0.136719,
+            "least_separated_features": [
+                {
+                    "feature": "bytes_transferred",
+                    "cohens_d": 0.1585,
+                    "human_mean": 110083.745,
+                    "tier_mean": 127742.6038
+                },
+                {
+                    "feature": "packet_size_mean",
+                    "cohens_d": 0.168,
+                    "human_mean": 698.2889,
+                    "tier_mean": 663.3939
+                },
+                {
+                    "feature": "session_duration",
+                    "cohens_d": 0.3134,
+                    "human_mean": 94.6458,
+                    "tier_mean": 76.6567
+                }
+            ],
+            "all_feature_separation": [
+                {
+                    "feature": "bytes_transferred",
+                    "cohens_d": 0.1585,
+                    "human_mean": 110083.745,
+                    "tier_mean": 127742.6038
+                },
+                {
+                    "feature": "packet_size_mean",
+                    "cohens_d": 0.168,
+                    "human_mean": 698.2889,
+                    "tier_mean": 663.3939
+                },
+                {
+                    "feature": "session_duration",
+                    "cohens_d": 0.3134,
+                    "human_mean": 94.6458,
+                    "tier_mean": 76.6567
+                },
+                {
+                    "feature": "request_interval_mean",
+                    "cohens_d": 0.5962,
+                    "human_mean": 0.8071,
+                    "tier_mean": 0.5426
+                },
+                {
+                    "feature": "requests_per_sec",
+                    "cohens_d": 0.66,
+                    "human_mean": 1.7341,
+                    "tier_mean": 2.6003
+                },
+                {
+                    "feature": "request_interval_var",
+                    "cohens_d": 0.6961,
+                    "human_mean": 0.9588,
+                    "tier_mean": 0.2023
+                },
+                {
+                    "feature": "packet_size_var",
+                    "cohens_d": 0.8382,
+                    "human_mean": 145692.3575,
+                    "tier_mean": 63215.3114
+                },
+                {
+                    "feature": "num_connections",
+                    "cohens_d": 1.8256,
+                    "human_mean": 6.17,
+                    "tier_mean": 11.2453
+                }
+            ],
+            "behavior_notes": "Least separated features from Human: bytes_transferred, packet_size_mean, session_duration. Mean bot confidence: 70.62%, mean human confidence: 13.67%."
+        }
+    ],
+    "evaluation_summary": {
+        "total_tiers": 3,
+        "matches": 3,
+        "mismatches": 0,
+        "source": "Empirical Model Evaluation (Synthetic Prototype Data)",
+        "limitation_note": "Real traffic exhibits distinct distribution properties. Higher sophistication tiers incorporate human pause dynamics that decrease detection F1."
+    }
+}

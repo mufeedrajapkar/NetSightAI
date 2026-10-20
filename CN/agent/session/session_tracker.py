@@ -25,7 +25,8 @@ class SessionTracker:
                 "total_bytes": flow["total_bytes"],
                 "packet_sizes": list(flow["packet_sizes"]),
                 "timestamps": list(flow["timestamps"]),
-                "protocol": flow["protocol"]
+                "protocol": flow["protocol"],
+                "num_connections": flow.get("num_connections", 1),
             }
 
         else:
@@ -37,6 +38,7 @@ class SessionTracker:
             session["total_bytes"] = flow["total_bytes"]
             session["packet_sizes"] = list(flow["packet_sizes"])
             session["timestamps"] = list(flow["timestamps"])
+            session["num_connections"] = flow.get("num_connections", 1)
 
         return self.sessions[flow_key]
 

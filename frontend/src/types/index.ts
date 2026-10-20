@@ -1,0 +1,188 @@
+export interface FeatureValues {
+  requests_per_sec: number
+  session_duration: number
+  packet_size_mean: number
+  packet_size_var: number
+  request_interval_mean: number
+  request_interval_var: number
+  bytes_transferred: number
+  num_connections: number
+  protocol: string
+}
+
+export interface ProbabilityEstimates {
+  Human: number
+  Bot: number
+  Suspicious: number
+  [key: string]: number
+}
+
+export interface FlowRecord {
+  flow_id: string
+  session_id?: string
+  device_id?: string
+  tier?: string
+  source_type: string
+  source_file: string
+  timestamp: string
+  epoch_time: number
+  expected_label: string
+  predicted_label: 'Human' | 'Bot' | 'Suspicious' | string
+  verdict?: 'Human' | 'Bot' | 'Suspicious' | string
+  raw_prediction?: string
+  disagreement?: boolean
+  verdict_reason?: string
+  anomaly_score?: number | null
+  is_anomaly?: boolean | null
+  is_match: boolean | null
+  model_type: string
+
+  probability_estimates: ProbabilityEstimates
+  features: FeatureValues
+  metadata: Record<string, any>
+  packet_count: number
+  raw_packet_count: number
+  session_duration: number
+  bytes_transferred: number
+  protocol: string
+}
+
+export interface SystemStatus {
+  status: string
+  service: string
+  timestamp: number
+  environment: {
+    pcap_available: boolean
+    is_admin: boolean
+    loopback_iface: string | null
+    can_capture_live: boolean
+    message: string
+    setup_guide: string
+  }
+  model: {
+    is_loaded: boolean
+    model_type: string
+    dataset_type?: string
+    dataset_note?: string
+    classes: string[]
+    contract_features: string[]
+    numerical_features: string[]
+    supported_protocols: string[]
+  }
+  operating_mode: string
+  active_capture: {
+    is_capturing: boolean
+    start_time: number | null
+    interface?: string | null
+    filter?: string | null
+    packets_seen?: number
+  }
+}
+
+export interface CaptureStatusResponse {
+  is_capturing: boolean
+  status: 'running' | 'stopped'
+  interface: string | null
+  filter: string | null
+  packets_seen: number
+  packets_parsed: number
+  start_time: number | null
+  duration: number
+}
+
+export interface OverviewData {
+  total_flows: number
+  dataset_type?: string
+  counts: {
+    human: number
+    bot: number
+    suspicious: number
+  }
+  distribution: {
+    name: string
+    value: number
+    color: string
+  }[]
+  capture_mode: string
+  model_type: string
+  recent_flows: FlowRecord[]
+}
+
+export interface BotTier {
+  id: string
+  name: string
+  sophistication: string
+  description: string
+  sample_count?: number
+  expected_label: string
+  baseline_result: string
+  detection_rate?: number
+  precision?: number
+  recall?: number
+  f1?: number
+  bot_probability: number
+  human_probability: number
+  latest_run?: FlowRecord | null
+  behavior_notes: string
+  least_separated_features?: { feature: string; cohens_d: number }[]
+}
+
+export interface BotTiersResponse {
+  tiers: BotTier[]
+  dataset_type?: string
+  has_curve_plot?: boolean
+  error?: string
+  evaluation_summary: {
+    total_tiers: number
+    matches: number
+    mismatches: number
+    source: string
+    limitation_note: string
+  }
+}
+
+export interface ArchitectureStage {
+  stage_number: number
+  name: string
+  domain: string
+  description: string
+  components: string[]
+  status: string
+}
+
+export interface ArchitectureResponse {
+  stages: ArchitectureStage[]
+  domains: {
+    computer_networks: string[]
+    artificial_intelligence: string[]
+  }
+}
+
+export interface AdversarialScenario {
+  description: string
+  total_sessions: number
+  classifier_evasion_rate: number
+  isolation_forest_evasion_rate: number
+  hybrid_sentinelnet_evasion_rate: number
+  suspicious_rescue_rate: number
+  bot_detection_rate: number
+  mean_anomaly_score: number | null
+  disagreement_rate: number
+}
+
+export interface AdversarialCountermeasure {
+  dimension: string
+  feature: string
+  rationale: string
+}
+
+export interface AdversarialResponse {
+  status: string
+  benchmark_provenance: string
+  scenarios: {
+    delay_mimicry_only?: AdversarialScenario
+    full_feature_mimicry?: AdversarialScenario
+  }
+  vulnerability_analysis: string
+  recommended_countermeasures: AdversarialCountermeasure[]
+}

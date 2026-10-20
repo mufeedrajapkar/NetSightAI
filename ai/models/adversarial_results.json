@@ -1,0 +1,51 @@
+{
+  "status": "success",
+  "benchmark_provenance": "simulated",
+  "scenarios": {
+    "delay_mimicry_only": {
+      "description": "Adversary manipulates request intervals and rates only",
+      "total_sessions": 10,
+      "classifier_evasion_rate": 1.0,
+      "isolation_forest_evasion_rate": 1.0,
+      "hybrid_sentinelnet_evasion_rate": 1.0,
+      "suspicious_rescue_rate": 0.0,
+      "bot_detection_rate": 0.0,
+      "mean_anomaly_score": -0.0961,
+      "disagreement_rate": 0.0
+    },
+    "full_feature_mimicry": {
+      "description": "Adversary shapes timing, rate, and packet size distributions",
+      "total_sessions": 10,
+      "classifier_evasion_rate": 0.8,
+      "isolation_forest_evasion_rate": 1.0,
+      "hybrid_sentinelnet_evasion_rate": 0.8,
+      "suspicious_rescue_rate": 0.0,
+      "bot_detection_rate": 0.2,
+      "mean_anomaly_score": -0.1486,
+      "disagreement_rate": 0.0
+    }
+  },
+  "vulnerability_analysis": "Statistical L4/L7 flow features (inter-arrival intervals, request rates, packet sizes) can be manipulated by a sophisticated adversary to mimic benign human distributions. While timing manipulation partially fools the Random Forest classifier, the Isolation Forest and hybrid verdict engine flag anomalies or disagreements as 'Suspicious'.",
+  "recommended_countermeasures": [
+    {
+      "dimension": "Transport Layer (CN)",
+      "feature": "TCP Window Size & Initial Congestion Window Dynamics",
+      "rationale": "Real OS TCP stacks (Linux, Windows, iOS) follow distinct congestion control window trajectories that synthetic socket bots rarely match."
+    },
+    {
+      "dimension": "Cryptographic / TLS Layer",
+      "feature": "TLS Client Hello Fingerprinting (JA3 / JA4 / Cipher Suites)",
+      "rationale": "Python requests/urllib TLS fingerprint differs drastically from real modern browsers (Chrome/Firefox/Safari TLS extensions, GREASE)."
+    },
+    {
+      "dimension": "Application Layer Telemetry",
+      "feature": "Payload Byte Entropy & Header Ordering",
+      "rationale": "Automated payload generators exhibit repeated patterns and non-standard HTTP/2 header sequences."
+    },
+    {
+      "dimension": "Client Interaction (L7)",
+      "feature": "Biometric DOM & Mouse Movement Telemetry",
+      "rationale": "Physical input events (bezier-curve mouse velocity, keystroke flight times) are orthogonal to network packet timings."
+    }
+  ]
+}

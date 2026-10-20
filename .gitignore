@@ -1,9 +1,19 @@
-# Python cache & virtualenv
+# Python cache & compiled files
 __pycache__/
 *.py[cod]
+*.pyc
 *$py.class
+
+# Virtual environments
 .venv/
 env/
+
+# Frontend dependencies and build artifacts
+node_modules/
+dist/
+dist-ssr/
+frontend/dist/
+frontend/node_modules/
 
 # SentinelNet generated logs (do not commit ground-truth run logs)
 *_log.csv
@@ -11,3 +21,15 @@ env/
 test_*.csv
 test_*.json
 human_log.csv
+*ingested_dataset.csv
+
+# Environment & Secret Configurations (do not commit API keys)
+.env
+*.env
+.env.local
+.env.*.local
+!.env.example
+agent_config.json
+config.json
+
+
