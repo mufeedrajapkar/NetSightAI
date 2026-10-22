@@ -91,7 +91,7 @@ export const AboutPage: React.FC = () => {
     {
       title: 'Platform Dependency for Live Sniffing',
       description:
-        'Windows live packet capture requires the Npcap kernel driver and Administrator privileges. SentinelNet defaults to fully reproducible offline PCAP replay.',
+        'Windows live packet capture requires the Npcap kernel driver and Administrator privileges. NetSight AI defaults to fully reproducible offline PCAP replay.',
     },
   ]
 
@@ -104,7 +104,7 @@ export const AboutPage: React.FC = () => {
           Project Information
         </div>
         <h2 className="text-xl font-semibold tracking-tight text-gray-100 sm:text-2xl">
-          About SentinelNet
+          About NetSight AI
         </h2>
         <p className="mt-1.5 text-xs leading-5 text-gray-400 sm:text-sm">
           Project objectives, technical implementation, and evaluation limitations.
@@ -130,7 +130,7 @@ export const AboutPage: React.FC = () => {
               </div>
 
               <h3 className="text-xl font-bold leading-tight tracking-tight text-gray-100 sm:text-2xl">
-                SentinelNet
+                NetSight AI
               </h3>
               <p className="mt-2 text-sm leading-6 text-blue-300">
                 AI-Assisted Network Traffic Intelligence
@@ -143,12 +143,12 @@ export const AboutPage: React.FC = () => {
 
           <blockquote className="rounded-xl border border-[#29364a] border-l-2 border-l-blue-400 bg-[#0b121c]/80 p-4 sm:p-5">
             <p className="text-sm leading-6 text-gray-200 sm:text-base">
-              “Wireshark tells you what is happening; SentinelNet tells you what it probably means.”
+              “Wireshark tells you what is happening; NetSight AI tells you what it probably means.”
             </p>
           </blockquote>
 
           <p className="max-w-4xl text-xs leading-6 text-gray-400 sm:text-sm">
-            SentinelNet analyzes network-flow behavioral telemetry at the
+            NetSight AI analyzes network-flow behavioral telemetry at the
             transport and session layer, extracting statistical rate and timing
             features to predict whether traffic originates from a{' '}
             <strong className="font-medium text-emerald-400">Human</strong>, a{' '}
@@ -214,7 +214,7 @@ export const AboutPage: React.FC = () => {
               Project Objective
             </h3>
             <p className="mt-2 text-xs leading-6 text-gray-400 sm:text-sm">
-              The goal of SentinelNet is to establish a rigorous, validated
+              The goal of NetSight AI is to establish a rigorous, validated
               integration bridge between low-level packet capture and flow
               processing (Computer Networks) and statistical machine learning
               (Artificial Intelligence). The system demonstrates how
@@ -324,7 +324,7 @@ export const AboutPage: React.FC = () => {
       <footer className="flex items-start gap-3 rounded-xl border border-[#253044] bg-[#101722] p-4">
         <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
         <p className="text-[11px] leading-5 text-gray-500">
-          SentinelNet uses network-flow statistics for behavioral inference.
+          NetSight AI uses network-flow statistics for behavioral inference.
           Its predictions should be interpreted in the context of the documented
           training data, validation results, and known limitations.
         </p>

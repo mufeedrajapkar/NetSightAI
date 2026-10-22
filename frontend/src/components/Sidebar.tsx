@@ -78,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex h-[68px] w-[68px] shrink-0 items-center justify-center">
           <img
             src="https://res.cloudinary.com/dtz0urit6/image/upload/q_auto:best,f_jpg/cloudinary-tools-uploads/e3ch7xxxvmk4juf1w46i"
-            alt="SentinelNet logo"
+            alt="NetSight AI logo"
             className="h-full w-full object-contain"
             loading="eager"
             decoding="async"
@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="min-w-0 flex-1">
           <h1 className="whitespace-nowrap text-sm font-bold tracking-wide text-gray-100">
-            SentinelNet
+            NetSight AI
           </h1>
           <p className="mt-1 whitespace-nowrap text-[10px] tracking-wide text-gray-500">
             Network Intelligence

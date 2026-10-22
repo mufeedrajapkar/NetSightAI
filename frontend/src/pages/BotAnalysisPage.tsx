@@ -559,7 +559,7 @@ export const BotAnalysisPage: React.FC = () => {
                     </div>
                     <div className="rounded-lg border border-[#29364a] bg-[#111a27] p-3">
                       <div className="text-[10px] text-gray-500">
-                        Net SentinelNet evasion
+                        NetSight AI evasion
                       </div>
                       <div className="mt-1 font-mono text-lg font-semibold text-violet-400">
                         {formatPercent(scenario.hybrid_sentinelnet_evasion_rate)}

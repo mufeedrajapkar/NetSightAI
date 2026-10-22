@@ -149,7 +149,7 @@ export const LiveTrafficPage: React.FC<LiveTrafficPageProps> = ({
             </div>
             <div className="text-gray-400 leading-relaxed">
               Windows native live packet sniffing requires Npcap with loopback support and Administrator privilege.
-              SentinelNet operates in zero-dependency <strong>PCAP Replay Mode</strong>, which safely parses actual
+              NetSight AI operates in zero-dependency <strong>PCAP Replay Mode</strong>, which safely parses actual
               binary packet captures with 100% fidelity.
             </div>
           </div>
