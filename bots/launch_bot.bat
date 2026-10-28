@@ -45,10 +45,10 @@ echo.
 
 if "%TIER_CHOICE%"=="1" (
     echo [*] Launching Tier 1 Naive Bot...
-    python "%~dp0tier1_naive.py" --target-url "%SERVER_URL%" --device-id "%DEVICE_ID%" --duration 60 --interval 0.5
+    python "%~dp0tier1_naive.py" --target-url "%SERVER_URL%" --device-id "%DEVICE_ID%" --duration 60 --interval 0.2
 ) else if "%TIER_CHOICE%"=="2" (
     echo [*] Launching Tier 2 Jittered Bot...
-    python "%~dp0tier2_jittered.py" --target-url "%SERVER_URL%" --device-id "%DEVICE_ID%" --duration 60 --min-interval 0.2 --max-interval 2.0
+    python "%~dp0tier2_jittered.py" --target-url "%SERVER_URL%" --device-id "%DEVICE_ID%" --duration 60 --min-interval 0.15 --max-interval 0.45
 ) else if "%TIER_CHOICE%"=="3" (
     echo [*] Launching Tier 3 Human-Mimicking Bot...
     python "%~dp0tier3_mimicking.py" --target-url "%SERVER_URL%" --device-id "%DEVICE_ID%" --duration 60
@@ -60,7 +60,7 @@ if "%TIER_CHOICE%"=="1" (
     python "%~dp0human_recorder.py" --target-url "%SERVER_URL%"
 ) else (
     echo [!] Invalid selection. Defaulting to Tier 1...
-    python "%~dp0tier1_naive.py" --target-url "%SERVER_URL%" --device-id "%DEVICE_ID%" --duration 60
+    python "%~dp0tier1_naive.py" --target-url "%SERVER_URL%" --device-id "%DEVICE_ID%" --duration 60 --interval 0.2
 )
 
 echo.
