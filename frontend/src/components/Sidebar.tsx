@@ -77,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex h-[100px] shrink-0 items-center gap-3 border-b border-[#253044] px-3">
         <div className="flex h-[68px] w-[68px] shrink-0 items-center justify-center">
           <img
-            src="https://res.cloudinary.com/dtz0urit6/image/upload/q_auto:best,f_jpg/cloudinary-tools-uploads/e3ch7xxxvmk4juf1w46i"
+            src="D:/Downloads/NetSight AI Network Intelligence Logo.png"
             alt="NetSight AI logo"
             className="h-full w-full object-contain"
             loading="eager"
