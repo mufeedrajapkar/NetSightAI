@@ -111,7 +111,7 @@ export const AIAnalysisPage: React.FC<AIAnalysisPageProps> = ({ flows }) => {
             Behavioral Interpretation Notice
           </h3>
           <p className="mt-1 text-xs leading-5 text-gray-400">
-            SentinelNet analyses network-flow behaviour using extracted
+            NetSight AI analyses network-flow behaviour using extracted
             statistical features. Its prediction represents the model&apos;s
             interpretation of observed traffic, not a definitive identification
             of the user or device.

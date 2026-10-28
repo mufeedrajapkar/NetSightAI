@@ -109,7 +109,7 @@ export const ArchitecturePage: React.FC = () => {
           System Architecture
         </h2>
         <p className="mt-1.5 max-w-3xl text-xs leading-5 text-gray-400 sm:text-sm">
-          End-to-end architecture of SentinelNet, from packet capture and
+          End-to-end architecture of NetSight AI, from packet capture and
           connection tracking to behavioral feature extraction and AI inference.
         </p>
       </header>
