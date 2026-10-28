@@ -790,6 +790,49 @@ def get_capture_status():
 
 
 # ---------------------------------------------------------------------------
+# Mock Target Endpoints (Victim endpoints for bots)
+# ---------------------------------------------------------------------------
+@app.route("/search")
+def mock_search():
+    q = request.args.get("q", "")
+    return jsonify({
+        "status": "success",
+        "query": q,
+        "results": [
+            {"id": 1, "title": f"Telemetry record for {q}", "score": 0.95},
+            {"id": 2, "title": f"Network flow entry for {q}", "score": 0.82},
+        ]
+    })
+
+
+@app.route("/product/<path:prod_id>")
+def mock_product(prod_id):
+    return jsonify({
+        "status": "success",
+        "product_id": prod_id,
+        "name": f"Network Hardware Sensor #{prod_id}",
+        "status": "active"
+    })
+
+
+@app.route("/api/data")
+def mock_api_data():
+    return jsonify({
+        "status": "online",
+        "timestamp": time.time(),
+        "telemetry_stream": "active"
+    })
+
+
+@app.route("/login", methods=["GET", "POST"])
+def mock_login():
+    return jsonify({
+        "status": "authenticated",
+        "session_token": f"sess_{int(time.time()*1000)}"
+    })
+
+
+# ---------------------------------------------------------------------------
 # Server Entry Point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
