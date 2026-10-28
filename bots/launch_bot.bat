@@ -57,7 +57,7 @@ if "%TIER_CHOICE%"=="1" (
     python "%~dp0tier4_adversarial.py" --target "%SERVER_URL%" --device-id "%DEVICE_ID%" --requests 30
 ) else if "%TIER_CHOICE%"=="5" (
     echo [*] Launching Human Traffic Recorder...
-    python "%~dp0human_recorder.py" --target-url "%SERVER_URL%"
+    python "%~dp0human_recorder.py" --target-url "%SERVER_URL%" --device-id "%DEVICE_ID%"
 ) else (
     echo [!] Invalid selection. Defaulting to Tier 1...
     python "%~dp0tier1_naive.py" --target-url "%SERVER_URL%" --device-id "%DEVICE_ID%" --duration 60 --interval 0.2
